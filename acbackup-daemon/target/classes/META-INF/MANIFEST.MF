@@ -1,0 +1,19 @@
+Manifest-Version: 1.0
+Built-By: jylee2
+Class-Path: ./lib/log4j-api-2.10.0.jar ./lib/log4j-core-2.10.0.jar ./l
+ ib/log4j-1.2-api-2.10.0.jar ./lib/log4j-slf4j-impl-2.10.0.jar ./lib/s
+ lf4j-api-1.8.0-alpha2.jar ./lib/commons-daemon-1.0.15.jar ./lib/postg
+ resql-9.3-1102-jdbc4.jar ./lib/sqljdbc4-3.0.jar ./lib/spring-context-
+ support-3.1.1.RELEASE.jar ./lib/spring-beans-3.1.1.RELEASE.jar ./lib/
+ spring-context-3.1.1.RELEASE.jar ./lib/spring-aop-3.1.1.RELEASE.jar .
+ /lib/spring-expression-3.1.1.RELEASE.jar ./lib/spring-asm-3.1.1.RELEA
+ SE.jar ./lib/spring-core-3.1.1.RELEASE.jar ./lib/spring-jdbc-3.1.1.RE
+ LEASE.jar ./lib/spring-tx-3.1.1.RELEASE.jar ./lib/aopalliance-1.0.jar
+  ./lib/mybatis-3.2.8.jar ./lib/mybatis-spring-1.2.2.jar ./lib/commons
+ -dbcp2-2.1.1.jar ./lib/commons-pool2-2.4.2.jar ./lib/commons-logging-
+ 1.2.jar ./lib/sga-crypto-0.2.1.jar ./lib/log4j-1.2.17.jar ./lib/slf4j
+ -log4j12-1.7.5.jar ./lib/sga-dbe-0.2.1.jar ./lib/super-csv-2.1.0.jar
+Build-Jdk: 1.8.0_231
+Created-By: Maven Integration for Eclipse
+Main-Class: sga.sol.ac.acbackup.daemon.App
+

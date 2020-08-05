@@ -1,0 +1,48 @@
+package sga.sol.ac.acotp.daemon.codec;
+
+import java.io.InputStream;
+
+import org.apache.mina.core.buffer.IoBuffer;
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.filter.codec.ProtocolDecoderAdapter;
+import org.apache.mina.filter.codec.ProtocolDecoderOutput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.tinyradius.packet.RadiusPacket;
+
+public class AcOtpDecoder extends ProtocolDecoderAdapter {
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	private String sharedSecret;
+	
+	public AcOtpDecoder(String sharedSecret) {
+		this.sharedSecret = sharedSecret;
+	}
+	
+	private String getSharedSecret(){
+		return this.sharedSecret;
+	}
+	
+	@Override
+	public void decode(IoSession session, IoBuffer in, ProtocolDecoderOutput out) throws Exception {
+		// 디코더 개선 필요 2017.12.12 swcho
+		/*
+		if(in.remaining() < 4){
+			//throw new Exception("packet is too short.");
+			throw new AcotpAuthenticationFailureException(0x01010501, "Packet is abnomal.");
+		}
+		
+		int code = in.get() & 0x0ff;
+		int identifier = in.get() & 0x0ff;
+		int length = in.getShort() & 0x0ffff;
+		byte[] authenticator = new byte[16];
+		in.get(authenticator);
+		in.rewind();
+		logger.info("Code:{}, Identifier:{}, Length:{}, Authenticator:{}", code, identifier, length, Arrays.toString(authenticator));
+		*/
+		
+		InputStream inputStream = in.asInputStream();
+		RadiusPacket radiusPacket = RadiusPacket.decodeRequestPacket(inputStream, getSharedSecret() );
+		out.write(radiusPacket);
+	}
+}

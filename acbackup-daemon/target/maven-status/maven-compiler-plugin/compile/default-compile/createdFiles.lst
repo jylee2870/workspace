@@ -1,0 +1,8 @@
+sga\sol\ac\acbackup\daemon\server\backupServer.class
+sga\sol\ac\acbackup\daemon\process\entity\AuthDetailLog.class
+sga\sol\ac\acbackup\daemon\server\ServerProperty.class
+sga\sol\ac\acbackup\daemon\process\dao\AuthCastleBackupDao.class
+sga\sol\ac\acbackup\daemon\process\service\AuthCastleBackupService.class
+sga\sol\ac\acbackup\daemon\handler\DaemonHandler.class
+sga\sol\ac\acbackup\daemon\App.class
+sga\sol\ac\acbackup\daemon\process\entity\AuthLog.class

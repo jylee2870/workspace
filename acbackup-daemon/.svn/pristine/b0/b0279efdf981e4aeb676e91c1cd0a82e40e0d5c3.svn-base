@@ -1,0 +1,42 @@
+package sga.sol.ac.acotp.daemon.process;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import sga.sol.ac.acotp.daemon.process.authentication.IAuthProcess;
+import sga.sol.ac.acotp.manager.exception.AcotpException;
+import sga.sol.ac.acotp.manager.key.entity.KeyStatus;
+import sga.sol.ac.acotp.manager.key.service.AcotpKeyService;
+
+@Service
+public class AuthProcessFactory {
+	
+	@Autowired
+	List<IAuthProcess> processList;
+	
+	@Autowired
+	@Qualifier("AcotpKeyService")
+	public AcotpKeyService acotpKeyService;
+	
+	public IAuthProcess excute(String userId) throws AcotpException{
+		
+		KeyStatus keyStatus = acotpKeyService.getKeyStatusByUserId(userId);
+		
+		IAuthProcess implement = null;
+		
+		if(!processList.isEmpty()){
+			for(IAuthProcess process : processList){
+				if(process.getOtpType() == keyStatus.getOtpType()){
+					implement = process;
+				}
+			}
+		}
+		
+		return implement;
+		
+	}
+	
+}

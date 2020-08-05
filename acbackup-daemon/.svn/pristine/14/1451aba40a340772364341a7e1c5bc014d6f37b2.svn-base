@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" name="ACOTP-DAEMON" package="sga.sol.ac.acotp">
+	<Appenders>
+		<Console name="CONSOLE" target="SYSTEM_OUT">
+      		<PatternLayout pattern="[%d{yy/MM/dd HH:mm:ss,sss}] [%5p] %25t %40C{2}:%4.4L %m%n"/>
+	    </Console>
+		
+		<!-- 
+		<File name="FILE" fileName="${sys:AC_HOME:-.}/logs/acotp-trace.log" append="true">
+      		<PatternLayout pattern="[%d{yy/MM/dd HH:mm:ss,sss}] [%5p] %25t %40C{2}:%4.4L %m%n"/>
+    	</File>
+		 -->
+		
+		<RollingFile name="FILE" fileName="${sys:AC_HOME:-.}/logs/acotp-trace.log" filePattern="${sys:AC_HOME:-.}/logs/acotp-trace.log.%d{yyyy-MM-dd}" append="true">
+      		<PatternLayout pattern="[%d{yy/MM/dd HH:mm:ss,sss}] [%5p] %25t %40C{2}:%4.4L %m%n"/>
+      		<Policies>
+				<TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+			</Policies>
+	   	</RollingFile>
+		
+		<RollingFile name="AUDIT" fileName="${sys:AC_HOME:-.}/logs/acotp-audit.log" filePattern="${sys:AC_HOME:-.}/logs/acotp-audit.log.%d{yyyy-MM-dd}" append="true">
+      		<PatternLayout pattern="%d{yy/MM/dd HH:mm:ss,sss}, %m%n"/>
+      		<Policies>
+				<TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+			</Policies>
+			<MarkerFilter marker="AUDIT-INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+	   	</RollingFile>
+	</Appenders>
+	
+	<Loggers>
+		<Root level="INFO">
+      		<AppenderRef ref="CONSOLE" />
+      		<AppenderRef ref="FILE" />
+    	</Root>
+		
+		<Logger name="sga.sol.ac.acotp.daemon" level="INFO">
+			<AppenderRef ref="AUDIT" />
+		</Logger>
+	</Loggers>	
+	
+</Configuration>

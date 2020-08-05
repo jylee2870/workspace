@@ -1,0 +1,167 @@
+package sga.sol.ac.acotp.daemon.process;
+
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.tinyradius.attribute.RadiusAttribute;
+import org.tinyradius.packet.AccessRequest;
+import org.tinyradius.packet.RadiusPacket;
+import org.tinyradius.util.RadiusException;
+
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder;
+
+import sga.sol.ac.acotp.daemon.process.authentication.IAuthProcess;
+import sga.sol.ac.acotp.manager.exception.AcotpException;
+import sga.sol.ac.acotp.manager.key.service.AcotpKeyService;
+
+@Service
+public class ServiceProcess {
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	private Marker marker = MarkerFactory.getMarker("AUDIT-INFO");
+
+	@Autowired
+	AuthProcessFactory processFactory;
+	
+	@Autowired
+	@Qualifier("AcotpKeyService")
+	private AcotpKeyService acotpKeyService;
+
+	enum LogType {
+		REQUEST, RESPONSE;
+	}
+
+	public void makeLog(LogType logType, String clientLocation, RadiusPacket packet, String addMessage) {
+		List attributes = packet.getAttributes();
+		StringBuffer s = new StringBuffer();
+		for (Iterator i = attributes.iterator(); i.hasNext();) {
+			RadiusAttribute attr = (RadiusAttribute) i.next();
+			s.append(attr.toString());
+			if (i.hasNext())
+				s.append(" , ");
+		}
+
+		if (logType == LogType.REQUEST) {
+			logger.info(marker, "{}, 0x{}, {}, [{}]", packet.getPacketTypeName(),
+					Hex.encodeHexString(packet.getAuthenticator()), clientLocation, s);
+		} else if (logType == LogType.RESPONSE) {
+			// addMessage가 존재할 경우 표시 (주로 인증 불가에 대한 이유) 2017.12.12 swcho
+			if (addMessage != null) {
+				logger.info(marker, "{}, 0x{}, {}, {}, [{}]", packet.getPacketTypeName(),
+						Hex.encodeHexString(packet.getAuthenticator()), clientLocation, addMessage, s);
+			} else {
+				logger.info(marker, "{}, 0x{}, {}, [{}]", packet.getPacketTypeName(),
+						Hex.encodeHexString(packet.getAuthenticator()), clientLocation, s);
+			}
+
+		}
+	}
+
+	public RadiusPacket accessRequestReceived(AccessRequest accessRequest, String address) throws RadiusException {
+		makeLog(LogType.REQUEST, address, accessRequest, null);
+		IAuthProcess process = null;
+		
+		int type = RadiusPacket.ACCESS_REJECT;
+
+		String userId = accessRequest.getUserName();
+//		String plaintext = null;
+
+		String addMessage = null;
+		try {
+//			plaintext = getUserPassword(userId);
+			process = processFactory.excute(userId);
+			
+			
+			if (process.authorize(userId, accessRequest.getUserPassword())) {
+				type = RadiusPacket.ACCESS_ACCEPT;
+				logger.info("ACOTP authentication successfully... ID:{}", userId);
+				addMessage = "Authentication successfully.";
+
+			} else {
+				logger.info("ACOTP authentication denied... ID:{}", userId);
+				addMessage = "Authentication denied.";
+			}
+			
+//			if (plaintext != null && accessRequest.verifyPassword(plaintext)) {
+//				type = RadiusPacket.ACCESS_ACCEPT;
+//				logger.info("ACOTP authentication successfully... ID:{}", userId);
+//				addMessage = "Authentication successfully.";
+//
+//			} else {
+//				logger.info("ACOTP authentication denied... ID:{}", userId);
+//				addMessage = "Authentication denied.";
+//			}
+		} catch (AcotpException e) {
+			logger.info("Authentication process error : {}", e.getMessage());
+			addMessage = e.getMessage();
+		}
+
+		RadiusPacket answer = new RadiusPacket(type, accessRequest.getPacketIdentifier());
+		answer.setAuthenticator(accessRequest.getAuthenticator());
+		answer.addAttribute(accessRequest.getAttribute("User-Name"));
+
+		// Radius Client에서 처리되지 못하는 문제가 있어 삭제 2017.12.11 swcho
+		// answer.addAttribute("Reply-Message", addMessage);
+
+		makeLog(LogType.RESPONSE, address, answer, addMessage);
+
+		return answer;
+	}
+
+	protected String getUserPassword(String userId) throws AcotpException {
+		String secretKey = getSecretKeyByUserId(userId);
+
+		GoogleAuthenticatorConfigBuilder gacb = new GoogleAuthenticatorConfigBuilder()
+				.setTimeStepSizeInMillis(TimeUnit.SECONDS.toMillis(30)).setWindowSize(2).setCodeDigits(6);
+		GoogleAuthenticator ga = new GoogleAuthenticator(gacb.build());
+
+		return String.format("%06d", ga.getTotpPassword(secretKey));
+	}
+	
+	protected boolean authorize(String userId, String otpPassword) throws AcotpException {
+		
+		int password = Integer.parseInt(otpPassword);
+		String secretKey = getSecretKeyByUserId(userId);
+
+		GoogleAuthenticatorConfigBuilder gacb = new GoogleAuthenticatorConfigBuilder()
+				.setTimeStepSizeInMillis(TimeUnit.SECONDS.toMillis(30)).setWindowSize(2).setCodeDigits(6);
+		GoogleAuthenticator ga = new GoogleAuthenticator(gacb.build());
+
+		return ga.authorize(secretKey, password);
+	}
+	
+
+	protected String getSecretKeyByUserId(String userId) throws AcotpException {
+		return acotpKeyService.getSecretKeyByUserId(userId);
+	}
+
+//	public static void main(String[] args) {
+//		KeyManagingFactory keyManagingFactory = new KeyManagingFactory();
+//		
+//		String secretKey = "JYvkdNGLGPCdoX82eyxuW9Fb35YuhgH8u8Q3o8mPm0s=="; 
+//		KeyManagingService keyManagingService = keyManagingFactory.create(2); 
+//		
+//		GoogleAuthenticatorConfigBuilder gacb = new GoogleAuthenticatorConfigBuilder()
+//				.setTimeStepSizeInMillis(TimeUnit.SECONDS.toMillis(30))
+//				.setWindowSize(2)
+//				.setCodeDigits(6);
+//		GoogleAuthenticator ga = new GoogleAuthenticator(gacb.build());
+//		try {
+//			System.out.println(String.format("%06d", ga.getTotpPassword(keyManagingService.decrypt(secretKey))));
+//		} catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+//	}
+
+}

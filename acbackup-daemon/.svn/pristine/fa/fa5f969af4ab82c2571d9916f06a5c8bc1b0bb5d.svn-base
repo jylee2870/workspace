@@ -1,0 +1,27 @@
+package sga.sol.ac.acotp.daemon.codec;
+
+import org.apache.mina.core.session.IoSession;
+import org.apache.mina.filter.codec.ProtocolCodecFactory;
+import org.apache.mina.filter.codec.ProtocolDecoder;
+import org.apache.mina.filter.codec.ProtocolEncoder;
+
+public class AcOtpProtocolCodecFactory implements ProtocolCodecFactory {
+	private ProtocolEncoder encoder;
+	private ProtocolDecoder decoder;
+
+	public AcOtpProtocolCodecFactory(String sharedSecret){
+		this.encoder = new AcOtpEncoder(sharedSecret);
+		this.decoder = new AcOtpDecoder(sharedSecret);
+	}
+
+	@Override
+	public ProtocolEncoder getEncoder(IoSession session) throws Exception {
+		return this.encoder;
+	}
+
+	@Override
+	public ProtocolDecoder getDecoder(IoSession session) throws Exception {
+		return this.decoder;
+	}
+
+}

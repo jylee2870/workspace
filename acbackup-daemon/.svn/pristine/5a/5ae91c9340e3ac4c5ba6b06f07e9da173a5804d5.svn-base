@@ -1,0 +1,169 @@
+package sga.sol.ac.acotp.daemon.process.authentication;
+
+import java.util.ArrayList;
+
+import javax.crypto.SecretKey;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.torchmind.authenticator.CounterTokenGenerator;
+import com.torchmind.authenticator.TokenGenerator;
+
+import sga.sol.ac.acotp.daemon.server.ServerProperty;
+import sga.sol.ac.acotp.manager.AcotpConstants;
+import sga.sol.ac.acotp.manager.exception.AcotpException;
+import sga.sol.ac.acotp.manager.key.entity.KeyStatus;
+import sga.sol.ac.acotp.manager.key.entity.OtpTypeInfo;
+
+@Service
+public class ServiceHOTPProcess extends AbstractProcess implements IAuthProcess{
+	public static int DEFAULT_HOTP_WINDOW_SIZE = 5;
+	
+	@Autowired
+	private ServerProperty serverProperty;
+	
+	private ArrayList<String> getOtpPasswordList(String userId, OtpTypeInfo otpTypeInfo) throws AcotpException{
+		
+		ArrayList<String> passwordList = new ArrayList<String>();
+		
+		int userAuthCount = otpTypeInfo.getAuthCount();
+		
+		int windowSize = DEFAULT_HOTP_WINDOW_SIZE;
+		if(serverProperty.getHotpWindowSize() != null){
+			windowSize = Integer.parseInt(serverProperty.getHotpWindowSize());
+		}
+		
+		
+		int hotpWindowSize = userAuthCount + windowSize;
+		
+		String secretKey = getSecretKeyByUserId(userId);
+		
+		CounterTokenGenerator generator = TokenGenerator.builder().createCounterGenerator(AcotpConstants.HOTP_ISSUER);
+		
+		SecretKey key = generator.parseCode(secretKey);
+		
+		for(int i = userAuthCount; i < hotpWindowSize; i++ ){
+			passwordList.add(generator.generateCode(key, i));
+		}
+		
+		return passwordList;
+	}
+	
+	@Override
+	public String getUserPassword(String userId) throws AcotpException {
+		String password = "";
+		
+		KeyStatus keyStatus = acotpKeyService.getKeyStatusByUserId(userId);
+		OtpTypeInfo otpTypeInfo = acotpKeyService.getOtpTypeInfo(keyStatus.getRecid());
+		int count = otpTypeInfo.getAuthCount();
+		
+		String secretKey = getSecretKeyByUserId(userId);
+		CounterTokenGenerator generator = TokenGenerator.builder().createCounterGenerator(AcotpConstants.HOTP_ISSUER);
+		
+		SecretKey key = generator.parseCode(secretKey);
+		
+		password = generator.generateCode(key, count);
+		
+		return password;
+	}
+
+	@Override
+	public boolean authorize(String userId, String otpPassword) throws AcotpException {
+		KeyStatus keyStatus = acotpKeyService.getKeyStatusByUserId(userId);
+		OtpTypeInfo otpTypeInfo = acotpKeyService.getOtpTypeInfo(keyStatus.getRecid());
+		
+		int userAuthCount = otpTypeInfo.getAuthCount();
+		
+		ArrayList<String> passwordList = getOtpPasswordList(userId, otpTypeInfo);
+		
+		boolean authFlag = false;
+		int lookAhead = 0;
+		
+		if(passwordList.size() > 0){
+			for(int i = 0; i < passwordList.size(); i++){
+				String password = passwordList.get(i);
+				
+				if(password.equals(otpPassword)){
+					authFlag = true;
+					lookAhead = i;
+				}
+			}
+		}
+		if(authFlag){
+			otpTypeInfo.setAuthCount(userAuthCount+lookAhead);
+			acotpKeyService.updateAcotpTypeAuthCount(otpTypeInfo);
+		}
+		
+		return authFlag;
+	}
+
+	@Override
+	public int getOtpType() {
+		// TODO Auto-generated method stub
+		return OTP_HOTP_TYPE;
+	}
+	
+//	public static void main(String[] args) {
+//		String secret = "QN6UO3KWIR4G3H4C";   
+//		Base32 base32 = new Base32();
+//		byte barray[]=base32 .decode(secret);
+//		
+//		ServiceHOTPProcess aa = new ServiceHOTPProcess();
+//		
+//		CounterTokenGenerator generator = TokenGenerator.builder().createCounterGenerator("Issuer");
+//		
+//		SecretKey key = generator.parseCode(secret);
+//
+//		
+//		System.out.println("generator.generateCode(key, 0);"+ generator.generateCode(key, 0));
+//		System.out.println("generator.generateCode(key, 0);"+ generator.generateSecret());
+//		
+//		try {
+//			System.out.println(aa.generateOTP(barray, 0, 6, false, 0));
+//			
+//			
+//		} catch (InvalidKeyException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (NoSuchAlgorithmException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}//1l is initial moving factor which is
+//	}
+	
+//	@Override
+//	public boolean authorize(String userId, String otpPassword) throws AcotpException {
+//		String password = "";
+//		
+//		KeyStatus keyStatus = acotpKeyService.getKeyStatusByUserId(userId);
+//		OtpTypeInfo otpTypeInfo = acotpKeyService.getOtpTypeInfo(keyStatus.getRecid());
+//		int count = otpTypeInfo.getAuthCount();
+//		
+//		Base32 base32 = new Base32();
+//		
+//		String secretKey = getSecretKeyByUserId(userId);
+//		
+//		byte [] barray =base32 .decode(secretKey);
+//		
+//		try {
+//			password = generateOTP(barray, count, 6, false, 0);
+//		} catch (InvalidKeyException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (NoSuchAlgorithmException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+//		if(password.equals(otpPassword)){
+//			acotpKeyService.updateAcotpTypeAuthCount(keyStatus);
+//			return true;
+//		}else{
+//			return false;
+//		}
+//	}
+	
+}
