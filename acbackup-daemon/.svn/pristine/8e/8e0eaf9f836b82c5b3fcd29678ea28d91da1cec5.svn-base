@@ -1,4 +1,0 @@
-db.driver=org.postgresql.Driver
-db.url=jdbc:postgresql://127.0.0.1:5432/authcastle
-db.username=acuser
-db.encpassword=4947c9abb6becdb300b6db0acc2b27c6

@@ -1,9 +1,0 @@
-package sga.sol.ac.acotp.daemon.process.authentication;
-
-import sga.sol.ac.acotp.manager.exception.AcotpException;
-
-public interface IAuthProcess {
-	public String getUserPassword(String userId) throws AcotpException;
-	public boolean authorize(String userId, String otpPassword) throws AcotpException;
-	public int getOtpType();
-}
