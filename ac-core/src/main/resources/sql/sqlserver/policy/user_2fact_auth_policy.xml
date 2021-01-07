@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="User2FactAuthPolicyMap" type="User2FactAuthPolicy">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="max_failed_count" property="maxFailedCount" />
+		<result column="auth_types" property="authTypes" />
+	</resultMap>
+	
+	<select id="select2FactAuthPolicyInfo" parameterType="int" resultMap="User2FactAuthPolicyMap">
+		SELECT 
+			recid,
+			policy_recid,
+			max_failed_count,
+			auth_types
+		FROM user_2fact_auth_policy
+		WHERE policy_recid = #{policyRecid}
+	</select>
+	
+	<!-- 정책 설정 추가 [사용자 2차인증 정책 ('2FACT_AUTH_POLICY')] -->
+	<insert id="insertPolicyConfigForPolicy2FactAuth" parameterType="hashmap">
+		INSERT INTO user_2fact_auth_policy
+			(
+				policy_recid,
+				max_failed_count,
+				auth_types
+			)
+		VALUES
+		(
+			CAST(#{policyRecid} AS INT),
+			CAST(#{maxFailedCount} AS INT),
+			CAST(#{authTypes} AS INT )
+		)
+	</insert>
+	
+	<!-- 정책 설정 수정 [사용자 2차인증 정책 ('2FACT_AUTH_POLICY')] -->
+	<update id="updatePolicyConfigForPolicy2FactAuth" parameterType="hashmap">
+		UPDATE user_2fact_auth_policy SET 
+			max_failed_count = CAST(#{maxFailedCount} AS INT),
+			auth_types = CAST(#{authTypes} AS INT )
+		WHERE policy_recid = CAST(#{recid} AS INT)
+	</update>
+	
+	<delete id="delete2FactAuthPolicyInfo" parameterType="int">
+		DELETE FROM user_2fact_auth_policy
+		WHERE policy_recid = #{policyRecid}
+	</delete>
+	
+</mapper>

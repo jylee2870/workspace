@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<!-- <resultMap type="PlUserEquip" id="plUserEquipResult">
+		<id column="recid" property="recid"/>
+		<result column="equip_account_recid" property="equipAccountId"/>
+		
+		<result column="create_dt" property="logRegDt"/>
+		<result column="create_ip" property="logRegIp"/>
+		<result column="create_user" property="logRegId"/>
+		<result column="update_dt" property="logChgInfoDt"/>
+		<result column="update_ip" property="logChgInfoIp"/>
+		<result column="update_user" property="logChgInfoId"/>
+		
+		<result column="equip_account_cnt" property="equipAccountCnt"/>
+
+		
+		<result column="USE_FLAG" property="useFlag"/>
+		<result column="UID_TYPE" property="uidType"/>
+		<result column="UID" property="uid"/>
+		<result column="EID_TYPE" property="eidType"/>
+		<result column="EID" property="eid"/>
+		<result column="GROUP_KEY" property="groupKey"/>
+		
+		<result column="ALL_ACCOUNT" property="allAccount"/>
+	</resultMap> -->
+	
+	<resultMap id="plUserEquipForUserResult" type="PlUserEquipForUser">
+		<id column="recid" property="recid"/>
+		<result column="user_id" property="userId"/>
+		<result column="user_name" property="userNm"/>
+		<result column="user_level_cd" property="userLevelCd"/>
+		<result column="user_group_name" property="userGrpNm"/>
+		<result column="user_group_path" property="userGrpPath"/>
+		<result column="equip_name" property="equipNm"/>
+		<result column="alias" property="equipNick"/>
+		<result column="equip_type" property="equipType"/>
+		<result column="equip_group_name" property="equipGrpNm"/>
+		<result column="equip_group_path" property="equipGrpPath"/>
+		
+		<result column="enabled" property="useFlag"/>
+		<result column="uid_type" property="uidType"/>
+		<result column="user_recid" property="uid"/>
+		<result column="eid_type" property="eidType"/>
+		<result column="equip_recid" property="eid"/>
+		<result column="equip_account_recid" property="accountId"/>
+		<result column="all_account" property="allAccount"/>
+
+		<result column="group_key" property="groupKey"/>
+		<result column="equip_account_cnt" property="equipAccountCnt"/>
+		
+		
+		<result column="user_grp_id" property="userGrpId"/>
+		<result column="user_group_grp_nm" property="userGroupGrpNm"/>
+		<result column="user_group_grp_path" property="userGroupGrpPath"/>
+		<result column="EQUIP_GRP_ID" property="equipGrpId"/>
+		<result column="IP_PRIMARY" property="ipPrimary"/>
+		<result column="IP_SECONDARY" property="ipSecondary"/>
+		<result column="MODEL_NO" property="modelNo"/>
+		<result column="VENDOR_NM" property="vendorNm"/>
+		<result column="OS" property="os"/>
+		<result column="equip_group_grp_nm" property="equipGroupGrpNm"/>
+		<result column="equip_group_grp_path" property="equipGroupGrpPath"/>
+		<result column="os_nm" property="osNm"/>
+		<result column="account_Id" property="accountId"/>
+		<result column="account_nm" property="accountNm"/>
+		<result column="account_nick" property="accountNick"/>
+		<result column="userIds" property="userIds"/>
+		<result column="auth_Ars" property="authArs"/>
+		<result column="auth_Pki" property="authPki"/>
+		<result column="auth_Otp" property="authOtp"/>
+		
+		<result column="object_type" property="objectType"/>
+	</resultMap>
+	
+	<!--
+		관리자 액세스 정책 목록 카운트
+		검색조건 로직 수정 2016.2.2 swcho
+	 -->
+	<select id="selectEquipAclForUserListCount" parameterType="PlUserEquipForUser" resultType="int">
+		WITH RECURSIVE user_groups AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+					recid = #{managerGrpId}
+				</if>
+			</where>
+			
+			UNION ALL
+			
+			SELECT UG.recid, UG.group_name, UG.group_path
+			FROM user_group_info UG INNER JOIN user_groups B on UG.parent_group_recid = B.recid
+		),
+		align_list AS (
+			SELECT AEM.recid
+				, AEM.user_recid
+				, UI.user_id
+				, UI.user_name
+				, UG.group_name	AS user_group_name
+				, UG.group_path	AS user_group_path
+				, AEM.assign_recid
+				, EI.equip_name
+				, EI.equip_type
+				, EG.group_name	AS equip_group_name
+				, EG.group_path	AS equip_group_path
+				, EI.alias
+				, EI.ip_primary
+				, 4				AS object_type
+				, EI.vendor_name	
+			 	, EI.model_no
+			 	, EO.os_name 
+			FROM assign_equip_management			AEM
+				INNER JOIN user_info 				UI	ON AEM.user_recid = UI.recid
+				LEFT JOIN user_group_relation 		UGR	ON UI.recid = UGR.user_recid
+				INNER JOIN user_group_info 			UG	ON UGR.group_recid = UG.recid
+				INNER JOIN equip_info 				EI	ON AEM.assign_recid = EI.recid
+				LEFT JOIN equip_group_relation		EGR	ON EI.recid = EGR.equip_recid
+				INNER JOIN equip_group_info 		EG	ON EGR.group_recid = EG.recid
+				LEFT JOIN os_info					EO	ON EI.os_recid = EO.recid
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+					AEM.recid IN ( SELECT recid FROM user_groups )
+				</if>
+			</where>
+		
+			UNION ALL
+		
+			SELECT AEGM.recid
+				, AEGM.user_recid
+				, UI.user_id
+				, UI.user_name
+				, UG.group_name	AS user_group_name
+				, UG.group_path	AS user_group_path
+				, AEGM.assign_recid
+				, NULL			AS equip_name
+				, 0				AS equip_type
+				, EG.group_name	AS equip_group_name
+				, EG.group_path	AS equip_group_path
+				, NULL			AS alias
+				, NULL			AS ip_primary
+				, 3				AS object_type
+				, NULL			AS vendor_name	
+			 	, NULL			AS model_no
+			 	, NULL			AS os_name	 
+			FROM assign_equip_group_management 			AEGM
+				INNER JOIN user_info 					UI	ON AEGM.user_recid = UI.recid
+				LEFT JOIN user_group_relation 			UGR	ON UI.recid = UGR.user_recid
+				INNER JOIN user_group_info 				UG	ON UGR.group_recid = UG.recid
+				INNER JOIN equip_group_info 			EG	ON AEGM.assign_recid = EG.recid
+			
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+					AEGM.recid IN ( SELECT recid FROM user_groups )
+				</if>
+			</where>
+		)
+		SELECT COUNT(*) AS count
+		  FROM align_list
+		<where>
+			<if test="userId != null and userId !='' ">
+	   	   	   user_id ILIKE '%' || #{userId} || '%'
+			</if>
+			<if test="userNm != null and userNm !='' ">
+	   	   AND user_name ILIKE '%' || #{userNm} || '%'
+			</if>
+			<if test="userGrpPath != null and userGrpPath !='' ">
+	   	   AND user_group_path ILIKE '%' || #{userGrpPath} || '%'
+			</if>
+			<if test="equipNm != null and equipNm !='' ">
+	   	   AND equip_name ILIKE '%' || #{equipNm} || '%'
+			</if>
+			<if test="equipNick != null and equipNick !='' ">
+	   	   AND alias ILIKE '%' || #{equipNick} || '%'
+			</if>
+			<if test="equipGrpPath != null and equipGrpPath !='' ">
+	   	   AND equip_group_path ILIKE '%' || #{equipGrpPath} || '%'
+			</if>
+			<if test="vendorNm != null and vendorNm !='' ">
+	   	   AND vendor_name ILIKE '%' || #{vendorNm} || '%'
+			</if>
+			<if test="modelNo != null and modelNo !='' ">
+	   	   AND model_no ILIKE '%' || #{modelNo} || '%'
+			</if>
+			<if test="ipPrimary != null and ipPrimary !='' ">
+	   	   AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+			</if>
+			<if test="osNm != null and osNm !='' ">
+	   	   AND os_name ILIKE '%' || #{osNm} || '%'
+			</if>
+			<if test="equipType != null and equipType != '' ">
+		   AND equip_type = #{equipType}
+			</if>
+		</where>  
+	</select>
+	
+	<!--
+		관리자 액세스 정책 목록
+		검색조건 로직 수정 2016.2.2 swcho
+	 -->
+	<select id="selectEquipAclForUserList" parameterType="PlUserEquipForUser" resultMap="plUserEquipForUserResult">
+		WITH RECURSIVE user_groups AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+ 					recid = #{managerGrpId}
+				</if>
+			</where>
+	
+		 UNION ALL
+	
+			SELECT UG.recid, UG.group_name, UG.group_path
+			FROM user_group_info UG INNER JOIN user_groups B on UG.parent_group_recid = B.recid
+		), align_list AS (
+			SELECT AEM.recid 
+				 , AEM.user_recid
+			 	 , UI.user_id
+			 	 , UI.user_name
+			  	 , UG.group_name	AS user_group_name
+			 	 , UG.group_path	AS user_group_path
+			 	 , AEM.assign_recid
+			 	 , EI.equip_name
+			 	 , EI.equip_type
+			 	 , EG.group_name	AS equip_group_name
+			 	 , EG.group_path	AS equip_group_path
+			 	 , EI.alias
+			 	 , EI.ip_primary
+			 	 , 4 				AS object_type
+			 	 , EI.vendor_name	
+			 	 , EI.model_no
+			 	 , EO.os_name
+  		  	  FROM assign_equip_management 	AEM
+    	INNER JOIN user_info 				UI	ON AEM.user_recid = UI.recid
+	 	 LEFT JOIN user_group_relation 		UGR	ON UI.recid = UGR.user_recid
+	 	INNER JOIN user_group_info 			UG 	ON UGR.group_recid = UG.recid
+    	INNER JOIN equip_info 				EI 	ON AEM.assign_recid = EI.recid
+	 	 LEFT JOIN equip_group_relation 	EGR	ON EI.recid = EGR.equip_recid
+	 	INNER JOIN equip_group_info 		EG 	ON EGR.group_recid = EG.recid
+     	 LEFT JOIN os_info					EO  ON EI.os_recid = EO.recid
+
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+		   	   	   AEM.recid IN ( SELECT recid FROM user_groups )
+				</if>
+			</where>
+
+		 UNION ALL
+		
+			SELECT AEGM.recid * -1
+				 , AEGM.user_recid
+	   			 , UI.user_id
+	   			 , UI.user_name
+	   			 , UG.group_name	AS user_group_name
+		   		 , UG.group_path	AS user_group_path
+		   		 , AEGM.assign_recid
+		   		 , NULL				AS equip_name
+		   		 , 0				AS equip_type
+		   		 , EG.group_name	AS equip_group_name
+		   		 , EG.group_path	AS equip_group_path
+		   		 , NULL				AS alias
+		   		 , NULL				AS ip_primary
+		   		 , 3				AS object_type
+		   		 , NULL				AS vendor_name	
+			 	 , NULL				AS model_no
+			 	 , NULL				AS os_name
+  		 	 FROM assign_equip_group_management AEGM
+   	   INNER JOIN user_info 					UI 	ON AEGM.user_recid = UI.recid
+		LEFT JOIN user_group_relation 			UGR	ON UI.recid = UGR.user_recid
+	   INNER JOIN user_group_info 				UG	ON UGR.group_recid = UG.recid
+   	   INNER JOIN equip_group_info 				EG 	ON AEGM.assign_recid = EG.recid
+		
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+			   	  AEGM.recid IN ( SELECT recid FROM user_groups )
+				</if>
+			</where>
+		
+		)
+		SELECT *
+		  FROM 
+		  	 (
+		  	 	SELECT ROW_NUMBER() OVER ( ORDER BY ${sortFieldNm} ${sortDir} ) AS rownum
+		  	 	     , *
+		  	 	  FROM align_list
+		  	
+		  	<where>
+				<if test="userId != null and userId !='' ">
+		   	   	   user_id ILIKE '%' || #{userId} || '%'
+				</if>
+				<if test="userNm != null and userNm !='' ">
+		   	   AND user_name ILIKE '%' || #{userNm} || '%'
+				</if>
+				<if test="userGrpPath != null and userGrpPath !='' ">
+		   	   AND user_group_path ILIKE '%' || #{userGrpPath} || '%'
+				</if>
+				<if test="equipNm != null and equipNm !='' ">
+		   	   AND equip_name ILIKE '%' || #{equipNm} || '%'
+				</if>
+				<if test="equipNick != null and equipNick !='' ">
+		   	   AND alias ILIKE '%' || #{equipNick} || '%'
+				</if>
+				<if test="equipGrpPath != null and equipGrpPath !='' ">
+		   	   AND equip_group_path ILIKE '%' || #{equipGrpPath} || '%'
+				</if>
+				<if test="vendorNm != null and vendorNm !='' ">
+		   	   AND vendor_name ILIKE '%' || #{vendorNm} || '%'
+				</if>
+				<if test="modelNo != null and modelNo !='' ">
+		   	   AND model_no ILIKE '%' || #{modelNo} || '%'
+				</if>
+				<if test="ipPrimary != null and ipPrimary !='' ">
+		   	   AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+				</if>
+				<if test="osNm != null and osNm !='' ">
+		   	   AND os_name ILIKE '%' || #{osNm} || '%'
+				</if>
+				<if test="equipType != null and equipType != '' ">
+			   AND equip_type = #{equipType}
+				</if>
+			</where>
+		  	 ) N
+		 WHERE N.rownum BETWEEN #{startPage} AND #{endPage}
+	</select>
+	
+	<!-- 
+		관리자 액세스 정책 목록 엑셀 다운로드
+		검색조건 로직 수정 2016.2.2 swcho
+	 -->
+	<select id="selectEquipAclForManagerListDownload" parameterType="PlUserEquipForUser" resultMap="plUserEquipForUserResult">
+		WITH RECURSIVE user_groups AS (
+			SELECT recid, group_name, group_path
+			  FROM user_group_info
+			<where>
+				<if test="managerGrpId != null and managerGrpId >0 ">
+ 			   	   recid = #{managerGrpId}
+				</if>
+			</where>
+	
+		 UNION ALL
+	
+			SELECT UG.recid, UG.group_name, UG.group_path
+			  FROM user_group_info UG INNER JOIN user_groups B on UG.parent_group_recid = B.recid
+		),
+		align_list AS (
+			SELECT AEM.recid 
+				 , AEM.user_recid
+			 	 , UI.user_id
+			 	 , UI.user_name
+			  	 , UG.group_name 	AS user_group_name
+			 	 , UG.group_path	AS user_group_path
+			 	 , AEM.assign_recid
+			 	 , EI.equip_name
+			 	 , EI.equip_type
+			 	 , EG.group_name 	AS equip_group_name
+			 	 , EG.group_path	AS equip_group_path
+			 	 , EI.alias
+			 	 , EI.ip_primary
+			 	 , EI.vendor_name	
+			 	 , EI.model_no
+			 	 , EO.os_name
+	 		  FROM assign_equip_management 	AEM
+	   	INNER JOIN user_info 				UI	ON AEM.user_recid = UI.recid
+	 	 LEFT JOIN user_group_relation 		UGR	ON UI.recid = UGR.user_recid
+	 	INNER JOIN user_group_info 			UG 	ON UGR.group_recid = UG.recid
+	   	INNER JOIN equip_info 				EI 	ON AEM.assign_recid = EI.recid
+	 	 LEFT JOIN equip_group_relation 	EGR	ON EI.recid = EGR.equip_recid
+	 	INNER JOIN equip_group_info 		EG 	ON EGR.group_recid = EG.recid
+	     LEFT JOIN os_info					EO  ON EI.os_recid = EO.recid
+		
+		<where>
+			<if test="managerGrpId != null and managerGrpId >0 ">
+		   	   AEM.recid IN ( SELECT recid FROM user_groups )
+			</if>
+		</where>
+		
+		 UNION ALL
+		
+			SELECT AEGM.recid * -1
+				 , AEGM.user_recid
+	   			 , UI.user_id
+	   			 , UI.user_name
+	   			 , UG.group_name 	AS user_group_name
+		   		 , UG.group_path	AS user_group_path
+		   		 , AEGM.assign_recid
+		   		 , NULL				AS equip_name
+		   		 , 0				AS equip_type
+		   		 , EG.group_name	AS equip_group_name
+		   		 , EG.group_path	AS equip_group_path
+		   		 , NULL				AS alias
+		   		 , NULL				AS ip_primary
+		   		 , NULL				AS vendor_name	
+			 	 , NULL				AS model_no
+			 	 , NULL				AS os_name
+	 		 	 FROM assign_equip_group_management AEGM
+	  	   INNER JOIN user_info 					UI 	ON AEGM.user_recid = UI.recid
+			LEFT JOIN user_group_relation 			UGR	ON UI.recid = UGR.user_recid
+	   	   INNER JOIN user_group_info 				UG	ON UGR.group_recid = UG.recid
+	  	   INNER JOIN equip_group_info 				EG 	ON AEGM.assign_recid = EG.recid
+		
+		<where>
+			<if test="managerGrpId != null and managerGrpId >0 ">
+		   	   AEGM.recid IN ( SELECT recid FROM user_groups )
+			</if>
+		</where>
+		)
+		SELECT *
+		  FROM align_list
+		
+		<where>
+			<if test="userId != null and userId !='' ">
+	   	   	   user_id ILIKE '%' || #{userId} || '%'
+			</if>
+			<if test="userNm != null and userNm !='' ">
+	   	   AND user_name ILIKE '%' || #{userNm} || '%'
+			</if>
+			<if test="userGrpPath != null and userGrpPath !='' ">
+	   	   AND user_group_path ILIKE '%' || #{userGrpPath} || '%'
+			</if>
+			<if test="equipNm != null and equipNm !='' ">
+	   	   AND equip_name ILIKE '%' || #{equipNm} || '%'
+			</if>
+			<if test="equipNick != null and equipNick !='' ">
+	   	   AND alias ILIKE '%' || #{equipNick} || '%'
+			</if>
+			<if test="equipGrpPath != null and equipGrpPath !='' ">
+	   	   AND equip_group_path ILIKE '%' || #{equipGrpPath} || '%'
+			</if>
+			<if test="vendorNm != null and vendorNm !='' ">
+	   	   AND vendor_name ILIKE '%' || #{vendorNm} || '%'
+			</if>
+			<if test="modelNo != null and modelNo !='' ">
+	   	   AND model_no ILIKE '%' || #{modelNo} || '%'
+			</if>
+			<if test="ipPrimary != null and ipPrimary !='' ">
+	   	   AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+			</if>
+			<if test="osNm != null and osNm !='' ">
+	   	   AND os_name ILIKE '%' || #{osNm} || '%'
+			</if>
+			<if test="equipType != null and equipType != '' ">
+		   AND equip_type = #{equipType}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipInfoForUserMgrPolicyCount" parameterType="map" resultType="int">
+		SELECT
+			COUNT(0)
+		FROM assign_equip_management AE
+			INNER JOIN equip_info				EI ON AE.assign_recid = EI.recid
+			INNER JOIN equip_group_relation		EGR ON EI.recid = EGR.equip_recid
+			INNER JOIN equip_group_info			EG ON EGR.group_recid = EG.recid
+			INNER JOIN os_info					OI ON OI.recid = EI.os_recid
+			INNER JOIN equip_service_relation	ESR ON ESR.equip_recid = EI.recid
+			INNER JOIN equip_service			ES ON ES.recid = ESR.equip_service_recid
+		WHERE AE.user_recid = CAST( #{userRecid} AS INT )
+	</select>
+	
+	<select id="selectEquipGroupInfoForUserMgrPolicyCount" parameterType="map" resultType="int">
+		SELECT 
+			COUNT(0)
+		FROM assign_equip_group_management AEGM
+			INNER JOIN equip_group_info EGI ON AEGM.assign_recid = EGI.recid
+		WHERE AEGM.user_recid = CAST( #{userRecid} AS INT)
+	</select>
+	
+	<!-- 사용자가 장비 관리 할수 있는 정책을 가졌을 때 -->
+	<select id="selectEquipGroupInfoForUserMgrPolicy" parameterType="map" resultMap="EquipGroupInfoResult">
+		SELECT
+			EGI.recid,
+			EGI.group_name,
+			EGI.group_path,
+			EGI.parent_group_recid,
+			EGI.create_dt,
+			EGI.create_ip,
+			EGI.create_user,
+			EGI.update_dt,
+			EGI.update_ip,
+			EGI.update_user
+		FROM assign_equip_group_management AEGM
+			INNER JOIN equip_group_info EGI ON AEGM.assign_recid = EGI.recid
+		WHERE AEGM.user_recid = CAST( #{userRecid} AS INT)
+		ORDER BY ${sort} ${dir}
+		OFFSET CAST( ${start} AS INT )
+		LIMIT CAST( ${rowCnt} AS INT )
+	</select>
+	
+	<!-- 사용자가 장비 관리 할수 있는 정책을 가졌을 때 -->
+	<select id="selectEquipInfoForUserMgrPolicy" parameterType="map" resultMap="EquipInfoExResult">
+		SELECT
+			EI.recid AS recid,
+			EI.equip_name AS equip_name,
+			EI.ip_primary AS ip_primary,
+			EI.ip_secondary AS ip_secondary,
+			EI.alias_enable AS alias_enable,
+			EI.alias AS alias,
+			EI.equip_type AS equip_type,
+			EI.vendor_name AS vendor_name,
+			EI.model_no AS model_no,
+			EI.description AS description,
+			EI.create_dt AS create_dt,
+			EI.create_ip AS create_ip,
+			EI.create_user AS create_user,
+			EI.update_dt AS update_dt,
+			EI.update_ip AS update_ip,
+			EI.update_user AS update_user,
+			EG.group_name AS eg_group_name,
+			EG.group_path AS eg_group_path,
+			EO.os_name AS eo_os_name,
+			ES.service_name AS es_service_name
+		FROM assign_equip_management AEM
+			INNER JOIN equip_info 				EI  ON AEM.assign_recid = EI.recid
+			INNER JOIN equip_group_relation 	EGR ON EI.recid = EGR.equip_recid
+			INNER JOIN equip_group_info 		EG  ON EGR.group_recid = EG.recid
+			INNER JOIN os_info 					EO  ON EO.recid = EI.os_recid
+			INNER JOIN equip_service_relation	ESR ON ESR.equip_recid = EI.recid
+			INNER JOIN equip_service			ES	ON ES.recid = ESR.equip_service_recid
+		WHERE AEM.user_recid = CAST( ${userRecid} AS INT)
+		
+		ORDER BY ${sort} ${dir}
+		OFFSET CAST( ${start} AS INT )
+		LIMIT CAST( ${rowCnt} AS INT )
+	</select>
+	
+	<!--
+		사용자 장비 접근 정책 리스트
+		PlUserEquipDao.java에서 사용
+	-->
+	<select id="selecteCmEquipInfoList008" parameterType="PlUserEquipForUser" resultMap="plUserEquipForUserResult">
+		SELECT assign_recid AS equip_recid
+		  FROM assign_equip_management
+		 WHERE user_recid = #{uid}
+	</select>
+	
+	<!--
+		장비 정보 리스트
+		PlUserEquipDao.java에서 사용
+	 -->
+	<select id="selecteCmEquipInfoList009" parameterType="PlUserEquipForUser" resultMap="plUserEquipForUserResult">
+		SELECT assign_recid AS equip_recid
+		FROM assign_equip_management	AEM
+			INNER JOIN equip_info				EI	ON AEM.assign_recid = EI.recid
+			INNER JOIN equip_group_relation		EGR	ON EI.recid = EGR.equip_recid
+			INNER JOIN equip_group_info			EG	ON EGR.group_recid = EG.recid
+		WHERE AEM.user_recid = #{uid}
+			AND EGR.group_recid IN ( ${inEquipGroupStrToken} )
+	</select>
+	
+	<select id="getAssignedEquipsForUser" parameterType="int" resultType="int">
+		SELECT assign_recid 
+		FROM assign_equip_management
+		WHERE user_recid = #{uid}
+	</select>
+	
+	<!-- 사용자에게 할당된 장비 그룹 -->
+	<select id="getAssignedEquipGroupsForUser" parameterType="int" resultType="int">
+		SELECT assign_recid 
+		FROM assign_equip_group_management
+		WHERE user_recid = #{uid}
+	</select>
+	
+	<select id="getEquipGroupsFromAssignedEquipsForUser" parameterType="int" resultType="int">
+		SELECT DISTINCT EGR.group_recid
+		FROM assign_equip_management AEM
+			INNER JOIN equip_group_relation EGR ON AEM.assign_recid = EGR.equip_recid
+		WHERE 
+			AEM.user_recid = #{uid}
+	</select>
+	
+	<!-- 장비 관리자 지정 -->
+	<!-- 중복으로 지정되지 않았을 경우에만 insert 2016.1.7 swcho -->
+	<insert id="insertPlUserEquipDataOfEquipManager" parameterType="map">
+		INSERT INTO assign_equip_management
+			( user_recid, assign_recid, create_dt, create_ip, create_user)
+		SELECT ${userRecid}, ${equipRecid} , LOCALTIMESTAMP, #{userIp}, #{userId} 
+		WHERE NOT EXISTS ( SELECT 1 
+							 FROM assign_equip_management 
+							WHERE user_recid = #{userRecid} AND assign_recid = #{equipRecid} )
+	</insert> 
+	
+	<!-- 장비그룹 관리자 지정 -->
+	<!-- 중복으로 지정되지 않았을 경우에만 insert 2016.1.7 swcho -->
+	<insert id="insertPlUserEquipDataOfEquipGroupManager" parameterType="map">
+		INSERT INTO assign_equip_group_management
+			( user_recid, assign_recid, create_dt, create_ip, create_user)
+		SELECT ${userRecid}, ${equipGroupRecid} , LOCALTIMESTAMP, #{userIp}, #{userId} 
+		WHERE NOT EXISTS ( SELECT 1 
+							 FROM assign_equip_group_management 
+							WHERE user_recid = #{userRecid} AND assign_recid = #{equipGroupRecid} )
+	</insert>
+	
+	<!-- 관리자가 삭제되면 해당 관련되면 관리자 장비 관리정책을 삭제 한다 -->
+	<delete id="cancellationEquipBeforeDeleteManager" parameterType="int">
+		DELETE FROM assign_equip_management
+		WHERE user_recid = #{value}
+	</delete>
+	
+	<delete id="cancellationEquipGroupBeforeDeleteManager" parameterType="int">
+		DELETE FROM assign_equip_group_management
+		WHERE user_recid = #{value}
+	</delete>
+	
+	<!-- 삭제된 장비에 대한 관리 지정을 해제(삭제) 한다  -->
+	<!-- 2016.3.2 일괄삭제를 위한 조건 분기문 추가 -->
+	<delete id="cancellationOfDeletedEquip" parameterType="int">
+		DELETE FROM assign_equip_management
+		<where>
+			<if test="value != 0">
+				assign_recid = #{value}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- 삭제된 장비 그룹에 대한 관리 지정을 해제(삭제) 한다  -->
+	<!-- 2016.3.2 일괄삭제를 위한 조건 분기문 추가 --> 
+	<delete id="cancellationOfDeletedEquipGroup" parameterType="int">
+		DELETE FROM assign_equip_group_management
+		<where>
+			<if test="value != 0">
+				assign_recid = #{value}
+			</if>
+		</where>
+	</delete>
+	
+	<delete id="deletePlUserEquipOfEquipManagerByuserRecidNAssignRecid" parameterType="map">
+		DELETE FROM assign_equip_management
+ 			  WHERE user_recid = ${userRecid}
+ 			  AND assign_recid = ${assignRecid}
+	</delete>
+	
+	<delete id="deletePlUserEquipGroupOfEquipManagerByuserRecidNAssignRecid" parameterType="map">
+		DELETE FROM assign_equip_group_management
+ 			  WHERE user_recid = ${userRecid}
+ 			  AND assign_recid = ${assignRecid}
+	</delete>
+	
+	<!-- 관리자 장비 관리 정책 모두 삭제 2016.1.26 swcho -->
+	<delete id="deletePlManagerEquipAll">
+		DELETE FROM assign_equip_management
+	</delete>
+	
+	<!-- 관리자 장비 관리 정책 모두 삭제 2016.1.26 swcho -->
+	<delete id="deletePlManagerEquipGroupAll">
+		DELETE FROM assign_equip_group_management
+	</delete>
+</mapper>

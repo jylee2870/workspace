@@ -1,0 +1,1048 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="UserInfoMap" type="UserInfo" >
+		<id column="recid" property="recid" />
+		<result column="user_id" property="userId" />
+		<result column="pwd" property="pwd" />
+		<result column="user_name" property="userName" />
+		<result column="email" property="email" />
+		<result column="mobile" property="mobile" />
+		<result column="phone" property="phone" />
+		<result column="company" property="company" />
+		<result column="department" property="department" />
+		<result column="position" property="position" />
+		<result column="user_level_cd" property="userLevelCd" />
+		<result column="description" property="description" />
+		<result column="disabled" property="disabled" />
+		<result column="create_dt" property="createDt" />
+		<result column="create_ip" property="createIp" />
+		<result column="create_user" property="createUser" />
+		<result column="update_dt" property="updateDt" />
+		<result column="update_ip" property="updateIp" />
+		<result column="update_user" property="updateUser" />
+		<result column="update_pwd_dt" property="updatePwdDt" />
+	</resultMap>
+	
+	<resultMap id="UserStatusMap" type="UserStatus" >
+		<id column="user_recid" property="userRecid" />
+		<result column="valid_enabled" property="validEnabled" />
+		<result column="valid_from_dt" property="validFromDt" />
+		<result column="valid_to_dt" property="validToDt" />
+		<result column="pwd_expired_dt" property="pwdExpiredDt" />
+		<result column="update_dt" property="updateDt" />
+		<result column="update_ip" property="updateIp" />
+		<result column="update_user" property="updateUser" />
+	</resultMap>
+	
+	<resultMap id="UserWebStatusMap" type="UserWebStatus">
+		<id column="user_recid" property="userRecid"/>
+		<result column="login_failed_cnt" property="loginFailedCnt" />
+		<result column="locked" property="locked" javaType="int" />
+		<result column="last_try_connect_dt" property="lastTryConnectDt" />
+		<result column="last_try_connect_method" property="lastTryConnectMethod" />
+		<result column="last_try_connect_ip" property="lastTryConnectIp" />
+		<result column="last_connect_dt" property="lastConnectDt" />
+		<result column="last_connect_method" property="lastConnectMethod" />
+		<result column="last_connect_ip" property="lastConnectIp" />
+	</resultMap>
+	
+	<resultMap id="User2FactStatusMap" type="User2FactStatus">
+		<id column="user_recid" property="userRecid"/>
+		<result column="locked" property="locked" javaType="int" />
+		<result column="failed_count" property="failedCount" />
+		<result column="last_connect_dt" property="lastConnectDt" />
+		<result column="last_connect_method" property="lastConnectMethod" />
+		<result column="last_connect_ip" property="lastConnectIp" />
+	</resultMap>
+	
+	<resultMap id="UserGroupInfoMap" type="UserGroupInfo" >
+		<id column="recid" property="recid" />
+		<result column="group_name" property="groupName" />
+		<result column="group_path" property="groupPath" />
+		<result column="parent_group_recid" property="parentGroupRecid" />
+		<result column="create_dt" property="createDt" />
+		<result column="create_ip" property="createIp" />
+		<result column="create_user" property="createUser" />
+		<result column="update_dt" property="updateDt" />
+		<result column="update_ip" property="updateIp" />
+		<result column="update_user" property="updateUser" />
+	</resultMap>
+	
+	<resultMap id="UserArsMap" type="UserArs">
+		<id column="user_recid" property="userRecid"/>
+		<result column="ars_tel" property="arsTel" />
+		<result column="ars_tel_desc" property="arsTelDesc" />
+		<result column="valid_time" property="validTime" />
+		<result column="ars_password" property="arsPassword" />
+	</resultMap>
+	
+	<resultMap id="userCertificateMap" type="UserCertificate">
+		<id column="recid" property="recid"/>
+		<result column="user_recid" property="userRecid"/>
+		<result column="enabled" property="enabled"/>
+		<result column="issuer" property="issuer"/>
+		<result column="serial_num" property="serialNum"/>
+		<result column="subject" property="subject"/>
+		<result column="valid_from_dt" property="validFromDt"/>
+		<result column="valid_to_dt" property="validToDt"/>
+	</resultMap>
+	
+	<resultMap id="UserInfoExMap" type="UserInfo" extends="UserInfoMap">
+		<association property="userGroup" resultMap="UserGroupInfoMap" columnPrefix="ug_" />
+		<association property="userStatus" resultMap="UserStatusMap" columnPrefix="us_" />
+		<association property="userWebStatus" resultMap="UserWebStatusMap" columnPrefix="uws_" />
+		<association property="user2FactStatus" resultMap="User2FactStatusMap" columnPrefix="ufs_" />
+		<association property="userArs" resultMap="UserArsMap" columnPrefix="ua_" />
+	</resultMap>
+	
+	<sql id="selectUserInfo">
+		SELECT
+			recid, user_id, pwd, user_name,
+			email, mobile, phone,
+			company, department, position,
+			user_level_cd, description, disabled,
+			create_dt, create_ip, create_user,
+			update_dt, update_ip, update_user,
+			update_pwd_dt
+		FROM user_info
+	</sql>
+	
+	<sql id="selectUserInfoEx">
+		SELECT
+			UI.*,
+			UG.recid as ug_recid,
+			UG.group_name as ug_group_name,
+			UG.group_path as ug_group_path,
+			UG.parent_group_recid as ug_parent_group_recid,
+			UG.create_dt as ug_create_dt,
+			UG.create_ip as ug_create_ip,
+			UG.create_user as ug_create_user,
+			UG.update_dt as ug_update_dt,
+			UG.update_ip as ug_update_ip,
+			UG.update_user as ug_update_user,
+			US.user_recid as us_user_recid,
+			US.valid_enabled as us_valid_enabled,
+			US.valid_from_dt as us_valid_from_dt,
+			US.valid_to_dt as us_valid_to_dt,
+			US.pwd_expired_dt as us_pwd_expired_dt,
+			US.update_dt as us_update_dt,
+			US.update_ip as us_update_ip,
+			US.update_user as us_update_user,
+			UWS.user_recid as uws_user_recid,
+			UWS.login_failed_cnt as uws_login_failed_cnt,
+			UWS.locked as uws_locked,
+			UWS.last_try_connect_dt as uws_last_try_connect_dt,
+			UWS.last_try_connect_method as uws_last_try_connect_method,
+			UWS.last_try_connect_ip as uws_last_try_connect_ip,
+			UWS.last_connect_dt as uws_last_connect_dt,
+			UWS.last_connect_method as uws_last_connect_method,
+			UWS.last_connect_ip as uws_last_connect_ip,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.user_recid ELSE null END AS ufs_user_recid,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.locked ELSE null END AS ufs_locked,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.failed_count ELSE null END AS ufs_failed_count,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.last_connect_dt ELSE null END AS ufs_last_connect_dt,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.last_connect_method ELSE null END AS ufs_last_connect_method,
+			CASE WHEN UI.user_level_cd = 3 THEN UFS.last_connect_ip ELSE null END AS ufs_last_connect_ip,
+			CASE WHEN UI.user_level_cd > 3 THEN UA.user_recid ELSE null END ua_user_recid,
+			CASE WHEN UI.user_level_cd > 3 THEN UA.ars_tel ELSE null END ua_ars_tel,
+			CASE WHEN UI.user_level_cd > 3 THEN UA.ars_tel_desc ELSE null END ua_ars_tel_desc,
+			CASE WHEN UI.user_level_cd > 3 THEN UA.valid_time ELSE null END ua_valid_time,
+			CASE WHEN UI.user_level_cd > 3 THEN UA.ars_password ELSE null END ua_ars_password
+		FROM user_info UI INNER JOIN user_status US		ON UI.recid = US.user_recid
+			INNER JOIN user_web_status UWS				ON UI.recid = UWS.user_recid
+			LEFT JOIN user_group_relation UGR			ON UI.recid = UGR.user_recid
+			LEFT JOIN user_group_info UG 				ON UG.recid = UGR.group_recid
+			LEFT JOIN user_2fact_status UFS				ON UI.recid = UFS.user_recid
+			LEFT JOIN user_ars UA						ON UI.recid = UA.user_recid
+	</sql>
+	
+	<!-- 2016.6.15 swcho -->
+	<!-- SearchParam 모델 적용, 기본적으로 모델내 명칭을 따른다 grpPath(x) groupPath(o), 모델에 없는 건 extraParams으로 idStatusList, userGrpIdList 같은 경우 -->
+	<select id="getUserInfoExCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(*)
+		FROM user_info UI INNER JOIN user_status US		ON UI.recid = US.user_recid
+			INNER JOIN user_web_status UWS				ON UI.recid = UWS.user_recid
+			INNER JOIN user_group_relation UGR			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG 				ON UG.recid = UGR.group_recid
+			<if test="entity.userLevelCd == 3">
+			INNER JOIN user_ars UA						ON UI.recid = UA.user_recid
+			INNER JOIN user_2fact_status UFS			ON UI.recid = UFS.user_recid
+			</if>
+		<where>
+			<if test="entity.userLevelCd != 0">
+				UI.user_level_cd = #{entity.userLevelCd}
+			</if>
+			<if test="extraParams != null">
+				<if test="null != extraParams.idStatusList and extraParams.idStatusList.size() > 0">
+					AND UWS.locked in
+					<foreach collection="extraParams.idStatusList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+				<if test="entity.userLevelCd == 3 and null != extraParams.secondIdStatusList and extraParams.secondIdStatusList.size() > 0">
+					AND UFS.locked in
+					<foreach collection="extraParams.secondIdStatusList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+			</if>
+			
+			<if test="entity.userId != null and entity.userId != '' ">
+				AND UI.user_id LIKE '%' + #{entity.userId} + '%'
+			</if>
+			<if test="entity.userName != null and entity.userName != '' ">
+				AND UI.user_name LIKE '%' + #{entity.userName} + '%'
+			</if>
+			<if test="entity.company != null and entity.company != '' ">
+				AND UI.company LIKE '%' + #{entity.company} + '%'
+			</if>
+			<if test="entity.mobile != null and entity.mobile != '' ">
+				AND UI.mobile LIKE '%' + #{entity.mobile} + '%'
+			</if>
+			<if test="entity.recid > 0 ">
+				AND UI.recid = #{entity.recid} 
+			</if>
+			
+			<if test="entity.userGroup.groupPath != null and entity.userGroup.groupPath != '' ">
+				AND UG.group_path LIKE '%' + #{entity.userGroup.group} + '%'
+			</if>
+			
+			<if test="extraParams != null">
+				<if test="null != extraParams.userGrpIdList and extraParams.userGrpIdList.size() > 0">
+					AND UG.recid IN
+					<foreach collection="extraParams.userGrpIdList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectUserInfoListExByPage" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="UserInfoExMap">
+		SELECT * FROM (
+			SELECT
+				ROW_NUMBER() OVER (ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum,
+				UI.*,
+				UG.recid as ug_recid,
+				UG.group_name as ug_group_name,
+				UG.group_path as ug_group_path,
+				UG.parent_group_recid as ug_parent_group_recid,
+				UG.create_dt as ug_create_dt,
+				UG.create_ip as ug_create_ip,
+				UG.create_user as ug_create_user,
+				UG.update_dt as ug_update_dt,
+				UG.update_ip as ug_update_ip,
+				UG.update_user as ug_update_user,
+				US.user_recid as us_user_recid,
+				US.valid_enabled as us_valid_enabled,
+				US.valid_from_dt as us_valid_from_dt,
+				US.valid_to_dt as us_valid_to_dt,
+				US.pwd_expired_dt as us_pwd_expired_dt,
+				US.update_dt as us_update_dt,
+				US.update_ip as us_update_ip,
+				US.update_user as us_update_user,
+				UWS.user_recid as uws_user_recid,
+				UWS.login_failed_cnt as uws_login_failed_cnt,
+				UWS.locked as uws_locked,
+				UWS.last_try_connect_dt as uws_last_try_connect_dt,
+				UWS.last_try_connect_method as uws_last_try_connect_method,
+				UWS.last_try_connect_ip as uws_last_try_connect_ip,
+				UWS.last_connect_dt as uws_last_connect_dt,
+				UWS.last_connect_method as uws_last_connect_method,
+				UWS.last_connect_ip as uws_last_connect_ip
+				<trim prefix="," prefixOverrides=",">
+					<if test="entity.userLevelCd == 3">
+						, UFS.user_recid as ufs_user_recid,
+						UFS.locked as ufs_locked,
+						UFS.failed_count as ufs_failed_count,
+						UFS.last_connect_dt as ufs_last_connect_dt,
+						UFS.last_connect_method as ufs_last_connect_method,
+						UFS.last_connect_ip as ufs_last_connect_ip
+					</if>
+				</trim>
+			FROM user_info UI INNER JOIN user_status US		ON UI.recid = US.user_recid
+				INNER JOIN user_web_status UWS				ON UI.recid = UWS.user_recid
+				INNER JOIN user_group_relation UGR			ON UI.recid = UGR.user_recid
+				INNER JOIN user_group_info UG 				ON UG.recid = UGR.group_recid
+				<if test="entity.userLevelCd == 3">
+				INNER JOIN user_ars UA						ON UI.recid = UA.user_recid
+				INNER JOIN user_2fact_status UFS			ON UI.recid = UFS.user_recid
+				</if>
+			<where>
+				<if test="entity.userLevelCd != 0">
+					UI.user_level_cd = #{entity.userLevelCd}
+				</if>
+				<if test="null != extraParams.idStatusList and extraParams.idStatusList.size() > 0">
+					AND UWS.locked in
+					<foreach collection="extraParams.idStatusList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+				<if test="entity.userLevelCd == 3 and null != extraParams.secondIdStatusList and extraParams.secondIdStatusList.size() > 0">
+					AND UFS.locked in
+					<foreach collection="extraParams.secondIdStatusList" item="item" open="(" separator="," close=")">
+						#{item}
+					</foreach>
+				</if>
+				<if test="entity.userId != null and entity.userId != '' ">
+					AND UI.user_id LIKE '%' + #{entity.userId} + '%'
+				</if>
+				<if test="entity.userName != null and entity.userName != '' ">
+					AND UI.user_name LIKE '%' + #{entity.userName} + '%'
+				</if>
+				<if test="entity.company != null and entity.company != '' ">
+					AND UI.company LIKE '%' + #{entity.company} + '%'
+				</if>
+				<if test="entity.recid > 0 ">
+					AND UI.recid = #{entity.recid} 
+				</if>
+				<if test="entity.userGroup.groupPath != null and entity.userGroup.groupPath != '' ">
+					AND UG.group_path LIKE '%' + #{entity.userGroup.groupPath} + '%'
+				</if>
+				
+				<if test="extraParams != null">
+					<if test="null != extraParams.userGrpIdList and extraParams.userGrpIdList.size() > 0">
+						AND UG.recid IN
+						<foreach collection="extraParams.userGrpIdList"	item="item" open="(" separator="," close=")">
+							#{item}
+						</foreach>
+					</if>
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum between #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectUserInfoListExForDown" parameterType="map" resultMap="UserInfoExMap">
+		SELECT
+			UI.*,
+			UG.recid as ug_recid,
+			UG.group_name as ug_group_name,
+			UG.group_path as ug_group_path,
+			UG.parent_group_recid as ug_parent_group_recid,
+			UG.create_dt as ug_create_dt,
+			UG.create_ip as ug_create_ip,
+			UG.create_user as ug_create_user,
+			UG.update_dt as ug_update_dt,
+			UG.update_ip as ug_update_ip,
+			UG.update_user as ug_update_user,
+			US.user_recid as us_user_recid,
+			US.valid_enabled as us_valid_enabled,
+			US.valid_from_dt as us_valid_from_dt,
+			US.valid_to_dt as us_valid_to_dt,
+			US.pwd_expired_dt as us_pwd_expired_dt,
+			US.update_dt as us_update_dt,
+			US.update_ip as us_update_ip,
+			US.update_user as us_update_user,
+			UWS.user_recid as uws_user_recid,
+			UWS.login_failed_cnt as uws_login_failed_cnt,
+			UWS.locked as uws_locked,
+			UWS.last_try_connect_dt as uws_last_try_connect_dt,
+			UWS.last_try_connect_method as uws_last_try_connect_method,
+			UWS.last_try_connect_ip as uws_last_try_connect_ip,
+			UWS.last_connect_dt as uws_last_connect_dt,
+			UWS.last_connect_method as uws_last_connect_method,
+			UWS.last_connect_ip as uws_last_connect_ip
+			<trim prefix="," prefixOverrides=",">
+				<if test="userLevelCd == 3">
+					, UFS.user_recid as ufs_user_recid,
+					UFS.locked as ufs_locked,
+					UFS.failed_count as ufs_failed_count,
+					UFS.last_connect_dt as ufs_last_connect_dt,
+					UFS.last_connect_method as ufs_last_connect_method,
+					UFS.last_connect_ip as ufs_last_connect_ip
+				</if>
+			</trim>
+		FROM user_info UI INNER JOIN user_status US		ON UI.recid = US.user_recid
+			INNER JOIN user_web_status UWS				ON UI.recid = UWS.user_recid
+			INNER JOIN user_group_relation UGR			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG				ON UG.recid = UGR.group_recid
+			<if test="userLevelCd == 3">
+			INNER JOIN user_ars UA						ON UI.recid = UA.user_recid
+			INNER JOIN user_2fact_status UFS			ON UI.recid = UFS.user_recid
+			</if>
+		<where>
+			UI.user_level_cd = #{userLevelCd}
+			<if test="null != idStatusList and idStatusList.size() > 0">
+				AND UWS.locked in
+				<foreach collection="idStatusList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="userLevelCd == 3 and null != secondIdStatusList and secondIdStatusList.size() > 0">
+				AND UFS.locked in
+				<foreach collection="secondIdStatusList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND UI.user_id LIKE '%' + #{userId} + '%'
+			</if>
+			<if test="userNm != null and userNm != '' ">
+				AND UI.user_name LIKE '%' + #{userNm} + '%'
+			</if>
+			<if test="company != null and company != '' ">
+				AND UI.company LIKE '%' + #{company} + '%'
+			</if>
+			<if test="grpPath != null and grpPath != '' ">
+				AND UG.group_path LIKE '%' + #{grpPath} + '%'
+			</if>
+			<if test="null != userGrpIdList and userGrpIdList.size() > 0">
+				AND UG.recid IN
+				<foreach collection="userGrpIdList" item="item" open="(" separator="," close=")">
+					#{item}
+				</foreach>
+			</if>
+			<if test="recid != null and recid != '' and recid > 0 ">
+				AND UI.recid = #{recid} 
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectUserRecidByUserIds" parameterType="list" resultType="int">
+		SELECT recid
+		FROM user_info
+		WHERE user_id IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</select>
+	
+	<select id="getUserInfoExByRecid" parameterType="int" resultMap="UserInfoExMap">
+		<include refid="selectUserInfoEx"/>
+		WHERE UI.recid = #{recid}
+	</select>
+	
+	<select id="getUserInfoExByUserId" parameterType="string" resultMap="UserInfoExMap">
+		<include refid="selectUserInfoEx"/>
+		WHERE UI.user_id = #{userId}
+	</select>
+	
+	<!--
+		사용자 정보를 통해서 사용자 조회(인증데몬)
+		2016.5.27 surfree
+	 -->
+	<select id="getUserInfoExByParam" parameterType="string" resultMap="UserInfoExMap">
+		<include refid="selectUserInfoEx"/>
+		<where>
+			<if test="userId != null and userId != ''">
+				AND UI.user_id = #{userId}
+			</if>
+			<if test="userName != null and userName !=''">
+				AND UI.user_name = #{userName}
+			</if> 
+			<if test="mobile != null and mobile != ''">
+				AND replace(UI.mobile, '-', '') = #{mobile}
+			</if>
+			<if test="userLevelCd  != 0 and userLevelCd  > 0" >
+				AND UI.user_level_cd = #{userLevelCd}
+			</if>
+		</where>
+	</select>
+	
+	<!--
+		사용자Id를 통해 사용자 정보 단순 조회
+		
+		Author:	LeeJungYoung 
+		Date:	2015.06.08
+	-->
+	<select id="getUserInfoByUserId" parameterType="string" resultMap="UserInfoMap">
+		<include refid="selectUserInfo"/>
+		WHERE user_id = #{userId}
+	</select>
+	
+	<!--
+		사용자 레코드 Id를 통해 사용자 정보 단순 조회
+	-->
+	<select id="getUserInfoByRecid" parameterType="int" resultMap="UserInfoMap">
+		<include refid="selectUserInfo"/>
+		WHERE recid = #{recid}
+	</select>
+	
+	<select id="getUserArsInfo" parameterType="int" resultMap="UserArsMap">
+		SELECT user_recid, ars_tel, ars_tel_desc, ars_password as ars_password
+		FROM user_ars
+		WHERE user_recid = CAST(#{userRecid} AS INT)
+	</select>
+	
+	<select id="getUserWebStatus" parameterType="int" resultMap="UserWebStatusMap">
+		SELECT user_recid, login_failed_cnt, locked,
+			last_try_connect_dt , last_try_connect_method , last_try_connect_ip,
+			last_connect_dt, last_connect_method, last_connect_ip
+		FROM user_web_status
+		WHERE user_recid = #{userRecid}
+	</select>
+	
+	<select id="getUser2FactStatus" parameterType="int" resultMap="User2FactStatusMap">
+		SELECT user_recid, failed_count, locked,
+			last_connect_dt, last_connect_method, last_connect_ip
+		FROM user_2fact_status
+		WHERE user_recid = #{userRecid}
+	</select>
+	
+	<insert id="insertUserInfo" parameterType="UserInfo" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO user_info (
+			user_id, pwd, user_name, email, 
+			mobile, phone, company, department, position,
+			user_level_cd, description,
+			create_dt, create_ip, create_user
+		)
+		VALUES (
+			#{userId}, #{pwd}, #{userName}, #{email},
+			#{mobile}, #{phone}, #{company}, #{department}, #{position},
+			#{userLevelCd}, #{description},
+			getdate(), #{createIp}, #{createUser}
+			
+		)
+	</insert>
+	
+	<insert id="insertUserStatus" parameterType="UserStatus">
+		INSERT INTO user_status(
+			user_recid,
+			valid_enabled, valid_from_dt, valid_to_dt,
+			pwd_expired_dt,
+			update_dt, update_ip, update_user
+		)
+		VALUES
+		(
+			#{userRecid},
+			#{validEnabled}, #{validFromDt}, #{validToDt}, #{pwdExpiredDt},
+			getdate(), #{updateIp}, #{updateUser}
+		)
+	</insert>
+	
+	<insert id="insertUserWebStatus" parameterType="UserWebStatus">
+		INSERT INTO user_web_status(
+			user_recid, login_failed_cnt, locked
+		)
+		VALUES (
+			#{userRecid}, 0, #{locked}
+		)
+	</insert>
+	
+	<insert id="insertUser2FactStatus" parameterType="User2FactStatus">
+		INSERT INTO user_2fact_status(
+			user_recid, failed_count, locked
+		)
+		VALUES (
+			#{userRecid}, 0, #{locked}
+		)
+	</insert>
+	
+	<insert id="insertUserArsInfo" parameterType="UserArs">
+		INSERT INTO user_ars (
+			user_recid,
+			ars_tel, ars_tel_desc,
+			valid_time,
+			ars_password
+		)
+		VALUES (
+			#{userRecid}, #{arsTel}, #{arsTelDesc},
+			#{validTime}, #{arsPassword}
+		)
+	</insert>
+	
+	<update id="modifyUserInfo" parameterType="UserInfo">
+		UPDATE user_info SET
+			user_name=#{userName},
+			email=#{email},
+			mobile=#{mobile},
+			phone=#{phone},
+			company=#{company},
+			department=#{department},
+			position=#{position},
+			update_dt = getdate(),
+			update_user = #{updateUser},
+			update_ip = #{updateIp}
+		WHERE
+			recid=#{recid}
+	</update>
+<!--
+	<update id="modifyUserGroupRelation" parameterType="UserGroupRelation">
+		UPDATE user_group_relation SET
+			group_recid=#{groupRecid},
+			update_dt=getdate(),
+			update_ip=#{updateIp},
+			update_user=#{updateUser}
+		WHERE user_recid=#{userRecid}
+	</update>
+-->
+	<update id="modifyUserStatusInfo" parameterType="UserStatus">
+		UPDATE user_status SET
+			valid_enabled=#{validEnabled},
+			valid_from_dt=#{validFromDt},
+			valid_to_dt=#{validToDt},
+			pwd_expired_dt=#{pwdExpiredDt},
+			update_dt=getdate(),
+			update_ip=#{updateIp},
+			update_user=#{updateUser}
+		WHERE
+			user_recid=#{userRecid}
+	</update>
+	
+	<update id="modifyUserWebStatusInfo" parameterType="UserWebStatus">
+		UPDATE user_web_status SET
+		<if test="loginFailedCnt != null">
+			login_failed_cnt = #{loginFailedCnt},
+		</if>
+			locked = #{locked}
+		WHERE user_recid = #{userRecid}
+	</update>
+	
+	<update id="modifyUser2FactStatusInfo" parameterType="User2FactStatus">
+		UPDATE user_2fact_status SET
+		<if test= "failedCount != null">
+			failed_count = #{failedCount},
+		</if>
+			locked = #{locked}
+		WHERE
+			user_recid = #{userRecid}
+	</update>
+	
+	<update id="modifyUserArsInfo" parameterType="UserArs">
+		UPDATE user_ars SET
+		<if test= "arsTelDesc != null and arsTelDesc != ''">
+			ars_tel_desc=#{arsTelDesc},
+		</if>
+			ars_tel=#{arsTel}
+		WHERE
+			user_recid=#{userRecid}
+	</update>
+	
+	<!-- 사용자 암호 수정 -->
+	<update id="updateUserPwdByRecid" parameterType="UserInfo">
+		UPDATE user_info SET
+			pwd = #{pwd},
+			update_dt = getdate(),
+			update_ip = #{updateIp},
+			update_user = #{updateUser},
+			update_pwd_dt = getdate()
+		WHERE recid = #{recid}
+	</update>
+	
+	<!-- 사용자 ARS 암호 수정 -->
+	<update id="updateUserArsPwdByRecid" parameterType="UserArs">
+		UPDATE user_ars SET
+			ars_password=#{arsPassword}
+		WHERE user_recid=#{userRecid}
+	</update>
+	
+	<update id="updateWebLoginFailure" parameterType="UserWebStatus">
+		UPDATE user_web_status SET
+			last_try_connect_dt = getdate(),
+			last_try_connect_method = #{lastTryConnectMethod},
+			last_try_connect_ip = #{lastTryConnectIp},
+			login_failed_cnt = login_failed_cnt + 1
+		WHERE user_recid = #{userRecid}
+	</update>
+	
+	<update id="updateWebLoginSuccess" parameterType="UserWebStatus">
+		UPDATE user_web_status SET
+			last_try_connect_dt = getdate(),
+			last_try_connect_method = #{lastTryConnectMethod},
+			last_try_connect_ip = #{lastTryConnectIp},
+			last_connect_dt = getdate(),
+			last_connect_method = #{lastConnectMethod},
+			last_connect_ip = #{lastConnectIp},
+			login_failed_cnt = 0
+		 WHERE user_recid = #{userRecid}
+	</update>
+	
+	<update id="update2FactAuthFailure" parameterType="User2FactStatus">
+		UPDATE user_2fact_status SET
+			failed_count = failed_count + 1
+		WHERE user_recid = #{userRecid}
+	</update>
+	
+	<update id="update2FactAuthSuccess" parameterType="User2FactStatus">
+		UPDATE user_2fact_status SET
+			last_connect_dt = getdate(),
+			last_connect_method = #{lastConnectMethod},
+			last_connect_ip = #{lastConnectIp},
+			failed_count = 0
+		 WHERE user_recid = #{userRecid}
+	</update>
+	
+	<!--
+		사용자 그룹 관계 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+<!--
+	<delete id="deleteUserGroupRelationByRecids" parameterType="list">
+		DELETE FROM user_group_relation
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+-->
+	<!--
+		사용자 상태 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteApproverByRecids" parameterType="list">
+		DELETE FROM wf_approver
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<delete id="deleteUserStatusByRecids" parameterType="list">
+		DELETE FROM user_status
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 웹 상태 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUserWebStatusByRecids" parameterType="list">
+		DELETE FROM user_web_status
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 2차 인증 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUser2FactStatusByRecids" parameterType="list">
+		DELETE FROM user_2fact_status
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 ARS 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUserArsByRecids" parameterType="list">
+		DELETE FROM user_ars
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 인증서 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUserCertificateByUserRecids" parameterType="list">
+		DELETE FROM user_certificate
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 정보 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUserInfoByRecids" parameterType="list">
+		DELETE FROM user_info
+		WHERE recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!-- 
+		2017.04.27 swcho
+		승인자의 사용자레벨로 삭제  
+		다른 삭제와 마찬가지로 castle 계정은 제외 조건 추가
+	-->
+	<delete id="deleteApproverByUserLevel" parameterType="int">
+		DELETE FROM wf_approver WA
+		  LEFT JOIN user_info UI
+			     ON UI.recid = WA.user_recid 
+		      WHERE UI.user_level_cd = #{userLevelCd}
+		        AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+		사용자 상태 모두 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserStatusByUserLevel" parameterType="int">
+		DELETE US FROM user_status US
+		LEFT JOIN user_info UI
+			ON UI.recid = US.user_recid
+		WHERE UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+		사용자 웹 상태 모두 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserWebStatusByUserLevel" parameterType="int">
+		DELETE UWS FROM user_web_status UWS
+		LEFT JOIN user_info UI
+			ON UI.recid = UWS.user_recid
+		WHERE UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+		사용자 2차 인증 정보 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUser2FactStatusByUserLevel" parameterType="int">
+		DELETE UFS FROM user_2fact_status UFS
+		LEFT JOIN user_info UI
+			ON UI.recid = UFS.user_recid
+		WHERE UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]> 
+	</delete>
+	
+	<!--
+		사용자 ARS 정보 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserArsByUserLevel" parameterType="int">
+		DELETE UA FROM user_ars UA
+		LEFT JOIN user_info UI
+			ON UI.recid = UA.user_recid 
+		WHERE UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+		사용자 인증서 정보 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserCertificateByUserLevel" parameterType="int">
+		DELETE UC FROM user_certificate UC
+		LEFT JOIN user_info UI
+			ON UI.recid = UC.user_recid
+		WHERE UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+		사용자 정보 삭제
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserInfoByUserLevel" parameterType="int">
+		DELETE FROM user_info
+		WHERE user_level_cd = #{userLevelCd}
+			AND recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+	============================================================================
+	FIDO 등록 정보 삭제
+	============================================================================
+	-->
+	<delete id="deleteFidoUserByRecids" parameterType="list">
+		DELETE FROM fido_user_info
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<delete id="deleteFidoUserAppStatusByRecids" parameterType="list">
+		DELETE FROM fido_user_app_status
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<delete id="deleteFidoUserRegiStatusByRecids" parameterType="list">
+		DELETE FROM fido_user_regi_status
+		WHERE user_recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<delete id="deleteFidoUserByUserLevel" parameterType="int">
+		DELETE FROM fido_user_info FU
+		  LEFT JOIN user_info UI
+			     ON UI.recid = FU.user_recid 
+		      WHERE UI.user_level_cd = #{userLevelCd}
+		        AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<delete id="deleteFidoUserAppStatusByUserLevel" parameterType="int">
+		DELETE FROM fido_user_app_status FA
+		  LEFT JOIN user_info UI
+			     ON UI.recid = FA.user_recid 
+		      WHERE UI.user_level_cd = #{userLevelCd}
+		        AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<delete id="deleteFidoUserRegiStatusByUserLevel" parameterType="int">
+		DELETE FROM fido_user_regi_status FR
+		  LEFT JOIN user_info UI
+			     ON UI.recid = FR.user_recid 
+		      WHERE UI.user_level_cd = #{userLevelCd}
+		        AND UI.recid <![CDATA[ <> 1 ]]>
+	</delete>
+	
+	<!--
+	============================================================================
+	인증서
+	============================================================================
+	-->
+	
+	<sql id="selectUserCertificate">
+		SELECT * FROM user_certificate
+	</sql>
+	
+	<select id="getUserCertificateCount" parameterType="map" resultType="int">
+		select count(*) as count
+		from user_certificate
+		where user_recid = #{userRecid}
+	</select>
+	
+	<!-- 인증서 조회 페이징 -->
+	<!-- 2016.12.6 swcho 정렬 추가 -->
+	<select id="selectUserCertificateByPage" parameterType="map" resultMap="userCertificateMap">
+		SELECT * 
+		FROM (
+			SELECT Row_Number() OVER (ORDER BY ${sortFieldNm} ${sortDir}) AS rownum, *
+			FROM user_certificate
+			WHERE user_recid = #{userRecid}
+		) N
+		WHERE N.rownum BETWEEN #{startPage} AND #{endPage}
+	</select>
+	
+	<!-- 인증서 조회 by recid -->
+	<select id="selectUserCertificateByRecid" parameterType="int" resultMap="userCertificateMap">
+		<include refid="selectUserCertificate"/>
+		WHERE recid=#{recid}
+	</select>
+	
+	<select id="getUserCertificateByIssuerNSerial" parameterType="UserCertificate" resultMap="userCertificateMap">
+		<include refid="selectUserCertificate"/>
+<!-- 		WHERE user_recid = #{userRecid} -->
+		WHERE
+			issuer = #{issuer} 
+			AND serial_num = #{serialNum} 
+			AND subject = #{subject}
+	</select>
+	
+	<insert id="insertUserCertificate" parameterType="UserCertificate">
+		INSERT INTO user_certificate(user_recid, enabled, issuer, serial_num, subject, valid_from_dt, valid_to_dt)
+		VALUES (#{userRecid}, #{enabled}, #{issuer}, #{serialNum}, #{subject}, #{validFromDt}, #{validToDt})
+	</insert>
+	
+	<!-- 인증서 삭제 -->
+	<delete id="deleteUserCertificateByRecid" parameterType="int">
+		DELETE FROM user_certificate
+		WHERE recid = #{recid}
+	</delete>
+	
+	<!-- 인증서 삭제 by recid 리스트 -->
+	<delete id="deleteUserCertificateByRecids" parameterType="list">
+		DELETE FROM user_certificate
+		WHERE recid IN
+		<foreach collection="list" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!-- 인증서 삭제 by recid 리스트 (개인용)-->
+	<delete id="deleteUserPrivateCertificateByRecids" parameterType="sga.sol.ac.core.entity.criteria.ExtraParams">
+		DELETE FROM user_certificate
+		WHERE	
+				user_recid = #{userRecid}
+			AND	recid IN
+			<foreach collection="idsList" item="id" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!-- 사용자 인증서 등록 상태 조회 -->
+	<!-- 2016.12.6 swcho 테이블 alias 규칙 적용 -->
+	<select id="getCertificateList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="UserCertificate">
+		SELECT * FROM (
+			SELECT
+				ROW_NUMBER() OVER ( ORDER BY ${sort.sortFieldNm} ${sort.sortDir} ) AS rownum
+				, UC.recid
+				, UC.user_recid			AS userRecid
+				, UI.user_name			AS userName
+				, UI.user_id			AS userId
+				, UC.enabled		
+				, UC.issuer
+				, UC.valid_from_dt		AS validFromDt
+				, UC.valid_to_dt		AS validToDt
+			FROM user_certificate				UC
+				RIGHT JOIN user_info			UI		ON		UC.user_recid = UI.recid
+				
+				<if test="entity.recid == null or entity.recid == '' ">
+				INNER JOIN user_group_relation	UGR		ON		UI.recid = UGR.user_recid
+				</if>
+			
+			<where>
+				<if test="entity.recid != null and entity.recid != '' ">
+				AND	UC.recid = #{entity.recid}
+				</if>
+				<if test="entity.userRecid != null and entity.userRecid != '' ">
+				AND	UI.recid = #{entity.userRecid}
+				</if>
+				<if test="entity.userId != null and entity.userId != '' ">
+				AND	UI.user_id LIKE '%' + #{entity.userId} + '%'
+				</if>
+				<if test="entity.userName != null and entity.userName != '' ">
+				AND	UI.user_Name LIKE '%' + #{entity.userName} + '%'
+				</if>
+				<if test="entity.issuer != null and entity.issuer != '' ">
+				AND UC.issuer LIKE '%' + #{entity.issuer} + '%'
+				</if>
+				<if test="entity.enabled != null and entity.enabled != '' ">
+				AND UC.enabled = #{entity.enabled}
+				</if>
+			</where>	
+		
+		) N
+		
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+
+	</select> 
+	
+	<!-- 사용자 인증서 등록 상태 조회 카운트 -->
+	<!-- 2016.12.6 swcho 테이블 alias 규칙 적용 -->
+	<select id="getCertificateListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(*)
+		FROM user_certificate				UC
+			RIGHT JOIN user_info			UI		ON		UC.user_recid = UI.recid
+			 	
+			<if test="entity.recid == null or entity.recid == '' ">
+			INNER JOIN user_group_relation	UGR		ON		UI.recid = UGR.user_recid
+			</if>
+			 	 	
+		<where>
+			<if test="entity.recid != null and entity.recid != '' ">
+			AND	UC.recid = #{entity.recid}
+			</if>
+			<if test="entity.userRecid != null and entity.userRecid != '' ">
+			AND	UI.recid = #{entity.userRecid}
+			</if>
+			<if test="entity.userId != null and entity.userId != '' ">
+			AND	UI.user_id LIKE '%' + #{entity.userId} + '%'
+			</if>
+			<if test="entity.userName != null and entity.userName != '' ">
+			AND	UI.user_Name LIKE '%' + #{entity.userName} + '%'
+			</if>
+			<if test="entity.issuer != null and entity.issuer != '' ">
+			AND UC.issuer LIKE '%' + #{entity.issuer} + '%'
+			</if>
+			<if test="entity.enabled != null and entity.enabled != '' ">
+			AND UC.enabled = #{entity.enabled}
+			</if>
+		</where>	
+	</select> 
+	
+	<!-- OTP 계정연동 사용자 테이블 추가 -->
+	<insert id="insertAccountSyncInfo" parameterType="UserInfo">
+		INSERT INTO otp_account_sync(user_id, update_dt)
+		VALUES (#{userId}, getdate())
+	</insert>
+</mapper>

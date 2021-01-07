@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipAccountResult" type="EquipAccount" >
+		<id column="recid" property="recid"/>
+		<result column="equip_recid" property="equipRecid"/>
+		<result column="domain" property="domain"/>
+		<result column="account" property="account"/>
+		<result column="alias_enable" property="aliasEnable"/>
+		<result column="account_alias" property="accountAlias"/>
+		<result column="pwd" property="pwd"/>
+		<result column="uid" property="uid"/>
+		<result column="gid" property="gid"/>
+		<result column="group_name" property="groupName"/>
+		<result column="login_shell" property="loginShell"/>
+		<result column="home_dir" property="homeDir"/>
+		<result column="create_dt" property="createDt"/>
+		<result column="create_ip" property="createIp"/>
+		<result column="create_user" property="createUser"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<resultMap id="EquipAccountExResult" type="EquipAccount" extends="EquipAccountResult">
+		<association property="equipInfo" resultMap="EquipInfoResult" columnPrefix="ei_" />
+	</resultMap>
+	
+	<!-- SELECT 쿼리 -->
+	<sql id="selectEquipAccount">
+		SELECT recid
+			, equip_recid
+			, domain
+			, account
+			, alias_enable
+			, account_alias
+			, pwd
+			, uid
+			, gid
+			, group_name
+			, login_shell
+			, home_dir
+			, create_dt
+			, create_ip
+			, create_user
+			, update_dt
+			, update_ip
+			, update_user
+		FROM equip_account
+	</sql>
+	
+	<sql id="selectEquipAccountEx">
+		SELECT EA.*
+			, EI.recid as ei_recid
+			, EI.equip_name as ei_equip_name
+			, EI.ip_primary as ei_ip_primary
+			, EI.ip_secondary as ei_ip_secondary
+			, EI.alias_enable as ei_alias_enable
+			, EI.alias as ei_alias
+			, EI.equip_type as ei_equip_type
+			, EI.vendor_name as ei_vendor_name
+			, EI.model_no as ei_model_no
+			, EI.os_recid as ei_os_recid
+			, EI.description as ei_description
+			, EI.create_dt as ei_create_dt
+			, EI.create_ip as ei_create_ip
+			, EI.create_user as ei_create_user
+			, EI.update_dt as ei_update_dt
+			, EI.update_ip as ei_update_ip
+			, EI.update_user as ei_update_user
+		FROM equip_account EA
+			INNER JOIN equip_info EI ON EA.equip_recid = EI.recid
+	</sql>
+	
+	<!-- 장비계정 개수 조회 -->
+	<select id="getEquipAccountListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(*)
+		FROM equip_account	EA
+			INNER JOIN equip_info			EI	ON EA.equip_recid = EI.recid
+			INNER JOIN equip_group_relation	EGR ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info		EG	ON EGR.group_recid = EG.recid
+		<where>
+			<if test="entity != null and entity.equipRecid > 0" >
+				AND EA.equip_recid = #{entity.equipRecid}
+			</if>
+			<if test="entity != null and entity.account != null and entity.account != ''">
+				AND EA.account ILIKE '%' || #{entity.account} || '%'
+			</if>
+			<if test="extraParams != null">
+				<if test="extraParams.equipName != null and extraParams.equipName != '' ">
+					AND EI.equip_name ILIKE '%' || #{extraParams.equipName} || '%'
+				</if>
+				<if test="extraParams.ipPrimary != null and extraParams.ipPrimary != '' ">
+					AND EI.ip_primary ILIKE '%' || #{extraParams.ipPrimary} || '%' 
+				</if>
+				<if test="extraParams.vendorName != null and extraParams.vendorName != '' ">
+					AND EI.vendor_name ILIKE '%' || #{extraParams.vendorName} || '%' 
+				</if>
+				<if test="extraParams.modelNo != null and extraParams.modelNo != '' ">
+					AND EI.model_no ILIKE '%' || #{extraParams.modelNo} || '%' 
+				</if>
+				<if test="extraParams.equipType != null and extraParams.equipType != '' ">
+					AND EI.equip_type = #{extraParams.equipType}
+				</if>
+				<if test="extraParams.equipList != null and extraParams.equipList > 0">
+					<foreach collection="extraParams.equipList" item="id"  open="AND EI.recid IN (" separator="," close=")">
+						#{id}
+					</foreach>
+				</if>
+				<if test="extraParams.equipGroupList != null and extraParams.equipGroupList > 0">
+					<foreach collection="extraParams.equipGroupList" item="id"  open="AND EGR.group_recid IN (" separator="," close=")">
+						#{id}
+					</foreach>
+				</if>
+			</if>
+		</where>
+	</select>
+	
+	<!-- 장비 계정 리스트 조회 (페이징) -->
+	<select id="selectEquipAccountList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="EquipAccountExResult">
+		SELECT *
+		FROM (
+			SELECT ROW_NUMBER() OVER (ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum
+				, EA.*
+				, EI.recid as ei_recid
+				, EI.equip_name as ei_equip_name
+				, EI.ip_primary as ei_ip_primary
+				, EI.ip_secondary as ei_ip_secondary
+				, EI.alias_enable as ei_alias_enable
+				, EI.alias as ei_alias
+				, EI.equip_type as ei_equip_type
+				, EI.vendor_name as ei_vendor_name
+				, EI.model_no as ei_model_no
+				, EI.os_recid as ei_os_recid
+				, EI.description as ei_description
+				, EI.create_dt as ei_create_dt
+				, EI.create_ip as ei_create_ip
+				, EI.create_user as ei_create_user
+				, EI.update_dt as ei_update_dt
+				, EI.update_ip as ei_update_ip
+				, EI.update_user as ei_update_user
+			FROM equip_account	EA
+				INNER JOIN equip_info			EI	ON EA.equip_recid = EI.recid
+				INNER JOIN equip_group_relation	EGR ON EGR.equip_recid = EI.recid
+				INNER JOIN equip_group_info		EG	ON EGR.group_recid = EG.recid
+			<where>
+				<if test="entity != null and entity.equipRecid > 0" >
+					AND EA.equip_recid = #{entity.equipRecid}
+				</if>
+				<if test="entity != null and entity.account != null and entity.account != ''">
+					AND EA.account ILIKE '%' || #{entity.account} || '%'
+				</if>
+				<if test="extraParams != null">
+					<if test="extraParams.equipName != null and extraParams.equipName != '' ">
+						AND EI.equip_name ILIKE '%' || #{extraParams.equipName} || '%'
+					</if>
+					<if test="extraParams.ipPrimary != null and extraParams.ipPrimary != '' ">
+						AND EI.ip_primary ILIKE '%' || #{extraParams.ipPrimary} || '%' 
+					</if>
+					<if test="extraParams.vendorName != null and extraParams.vendorName != '' ">
+						AND EI.vendor_name ILIKE '%' || #{extraParams.vendorName} || '%' 
+					</if>
+					<if test="extraParams.modelNo != null and extraParams.modelNo != '' ">
+						AND EI.model_no ILIKE '%' || #{extraParams.modelNo} || '%' 
+					</if>
+					<if test="extraParams.equipType != null and extraParams.equipType != '' ">
+						AND EI.equip_type = #{extraParams.equipType}
+					</if>
+					<if test="extraParams.equipList != null and extraParams.equipList > 0">
+						<foreach collection="extraParams.equipList" item="id"  open="AND EI.recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+					<if test="extraParams.equipGroupList != null and extraParams.equipGroupList > 0">
+						<foreach collection="extraParams.equipGroupList" item="id"  open="AND EGR.group_recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipAccountByParam" parameterType="EquipAccount" resultMap="EquipAccountExResult">
+		<include refid="selectEquipAccountEx"/>
+		<where>
+			<if test="recid > 0">
+				AND EA.recid = #{recid}
+			</if>
+			<if test="equipRecid > 0">
+				AND EA.equip_recid = #{equipRecid}
+			</if>
+			<if test="account != null and account != ''">
+				AND EA.account = #{account}
+			</if>
+			<if test="domain != null and domain != ''">
+				AND EA.domain = #{domain}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 장비 계정 추가 -->
+	<insert id="insertEquipAccount" parameterType="EquipAccount" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO equip_account
+			( equip_recid, account, account_alias, alias_enable,
+				pwd, uid, gid, domain, group_name, login_shell, home_dir,
+				create_dt, create_ip, create_user)
+		VALUES
+			( #{equipRecid}, #{account}, #{accountAlias}, #{aliasEnable}
+			, #{pwd}, #{uid}, #{gid}, #{domain}, #{groupName}, #{loginShell}, #{homeDir}
+			, LOCALTIMESTAMP, #{createIp}, #{createUser}
+			)
+	</insert>
+	
+	<!-- 장비 계정 전체 수정 By recid -->
+	<update id="updateEquipAccountByRecid" parameterType="EquipAccount">
+		UPDATE equip_account
+		SET account = #{account}
+			, alias_enable = #{aliasEnable}
+			, account_alias = #{accountAlias}
+			, pwd = #{pwd}
+			, uid = #{uid}
+			, gid = #{gid}
+			, domain = #{domain}
+			, group_name = #{groupName}
+			, login_shell = #{loginShell}
+			, home_dir = #{homeDir}
+			, update_dt = LOCALTIMESTAMP
+			, update_ip = #{updateIp}
+			, update_user = #{updateUser}
+		 WHERE recid = #{recid}
+	</update>
+	
+	<delete id="deleteEquipAccountByRecid" parameterType="int">
+		DELETE FROM equip_account
+		WHERE recid = #{recid}
+	</delete>
+	
+	<delete id="deleteEquipAccountByEquipId" parameterType="int">
+		DELETE FROM equip_account
+		WHERE equip_recid = #{equipRecid}
+	</delete>
+	
+	<!--
+		다수 장비 계정 삭제 By equipRecid
+		2016.3.2 swcho 선택된 장비 없이 계정을 일괄삭제 가능하도록 분기문 추가
+	 -->
+	<delete id="deleteEquipAccountByEquipIdList" parameterType="list">
+		DELETE FROM equip_account
+		<where>
+			<if test="list != null and list.size > 0">
+				<foreach collection="list" item="id"  open="equip_recid IN (" separator="," close=")">
+					#{id}
+				</foreach>
+			</if>
+		</where>
+	</delete>
+	
+	<!-- 다수 장비 계정 삭제 By RECID -->
+	<delete id="deleteEquipAccountByRecidList" parameterType="list">
+		DELETE FROM equip_account
+		WHERE recid IN
+		<foreach collection="list" item="id"  open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+</mapper>

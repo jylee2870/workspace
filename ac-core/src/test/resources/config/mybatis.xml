@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//www.mybatis.org//DTD Config 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings>
+		<setting name="logImpl" value="LOG4J"/>
+	</settings>
+	<typeAliases>
+		<!-- 사용자 -->
+		<typeAlias type="sga.sol.ac.core.entity.user.UserInfo" alias="UserInfo" />
+		<typeAlias type="sga.sol.ac.core.entity.user.UserStatus" alias="UserStatus" />
+		<typeAlias type="sga.sol.ac.core.entity.user.UserWebStatus" alias="UserWebStatus" />
+		<typeAlias type="sga.sol.ac.core.entity.user.User2FactStatus" alias="User2FactStatus" />
+		<typeAlias type="sga.sol.ac.core.entity.user.UserArs" alias="UserArs" />
+		<typeAlias type="sga.sol.ac.core.entity.user.UserCertificate" alias="UserCertificate" />
+		
+		<typeAlias type="sga.sol.ac.core.entity.user.UserGroupInfo" alias="UserGroupInfo" />
+		<typeAlias type="sga.sol.ac.core.entity.user.UserGroupRelation" alias="UserGroupRelation" />
+		
+		<!-- 장비 -->
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipInfo" alias="EquipInfo" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipAccount" alias="EquipAccount" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipService" alias="EquipService" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipServiceRelation" alias="EquipServiceRelation" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipOsInfo" alias="EquipOsInfo" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipVendor" alias="EquipVendor" />
+		
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipGroupInfo" alias="EquipGroupInfo" />
+		<typeAlias type="sga.sol.ac.core.entity.equip.EquipGroupRelation" alias="EquipGroupRelation" />
+		
+		<!-- 로그 -->
+		<typeAlias type="sga.sol.ac.core.entity.log.AuthLog" alias="AuthLog" />
+		<typeAlias type="sga.sol.ac.core.entity.log.AuthDetailLog" alias="AuthDetailLog" />
+		<typeAlias type="sga.sol.ac.core.entity.log.ApprovalLog" alias="ApprovalLog" />
+		<typeAlias type="sga.sol.ac.core.entity.log.ApprovalDetailLog" alias="ApprovalDetailLog" />
+		<typeAlias type="sga.sol.ac.core.entity.log.LmManagementLog" alias="LmManagementLog" />
+		
+		<!-- 정책 -->
+		<typeAlias type="sga.sol.ac.core.entity.policy.Policy" alias="Policy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PolicyObject" alias="PolicyObject" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PolicyTarget" alias="PolicyTarget" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PolicyParam" alias="PolicyParam" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PolicyParamUser" alias="PolicyParamUser" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PolicyParamEquip" alias="PolicyParamEquip" />
+		
+		<typeAlias type="sga.sol.ac.core.entity.policy.PlUserEquip" alias="PlUserEquip" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.PlUserEquipForUser" alias="PlUserEquipForUser" />
+		
+		<typeAlias type="sga.sol.ac.core.entity.policy.UserWebLoginPolicy" alias="UserWebLoginPolicy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.UserPasswordPolicy" alias="UserPasswordPolicy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.User2FactAuthPolicy" alias="User2FactAuthPolicy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.ArsApprovalPolicy" alias="ArsApprovalPolicy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.Equip2FactPolicy" alias="Equip2FactPolicy" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.EquipArsApprovalPolicy" alias="EquipArsApprovalPolicy" />
+		
+		<!-- 웹 정책 보조 -->
+		<typeAlias type="sga.sol.ac.core.entity.policy.UserAuthPolicyList" alias="UserAuthPolicyList" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.EquipArsApprovalPolicyList" alias="EquipArsApprovalPolicyList" />
+		<typeAlias type="sga.sol.ac.core.entity.policy.EquipArsApprovalPolicyListTypeApprover" alias="EquipArsApprovalPolicyListTypeApprover" />
+	</typeAliases>
+</configuration>

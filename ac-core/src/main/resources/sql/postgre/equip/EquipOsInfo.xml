@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipOSResult" type="EquipOsInfo">
+		<id column="recid" property="recid"/>
+		<result column="os_name" property="osName"/>
+		<result column="architecture" property="architecture"/>
+		<result column="version" property="version"/>
+		<result column="create_dt" property="createDt"/>
+		<result column="create_user" property="createUser"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_user" property="updateUser"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="os_type" property="osType"/>
+	</resultMap>
+	
+	<sql id="selectEquipOs">
+		SELECT *
+		FROM os_info
+	</sql>
+	
+	<!-- os_info 테이블 조회 카운트 -->
+	<select id="getEquipOsListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(0) AS count
+		FROM os_info
+		<where>
+			<if test='entity.osName != null and entity.osName != ""'>
+				AND os_name ILIKE '%' || #{entity.osName} || '%'
+			</if>
+			<if test='entity.osType > 0'>
+				AND os_type = #{entity.osType}
+			</if>
+			<if test='extraParams != null'>
+				<choose>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+						AND date(create_dt) BETWEEN date(#{extraParams.startDate}) AND date(#{extraParams.endDate})
+					</when>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+						AND date(create_dt) >= date(#{extraParams.startDate})
+					</when>
+					<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+						AND date(#{extraParams.endDate}) >= date(create_dt)
+					</when>
+				</choose>
+			</if>
+		</where>
+	</select>
+	
+	<!-- os_info 테이블 조회 -->
+	<select id="selectEquipOsList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="EquipOSResult">
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER(ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum,
+				recid,
+				os_name,
+				architecture,
+				version,
+				create_dt,
+				create_ip,
+				create_user,
+				update_dt,
+				update_ip,
+				update_user,
+				os_type
+			FROM os_info
+			<where>
+				<if test='entity.osName != null and entity.osName != ""'>
+					AND os_name ILIKE '%' || #{entity.osName} || '%'
+				</if>
+				<if test='entity.osType > 0'>
+					AND os_type = #{entity.osType}
+				</if>
+				<if test='extraParams != null'>
+					<choose>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+							AND date(create_dt) BETWEEN date(#{extraParams.startDate}) AND date(#{extraParams.endDate})
+						</when>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+							AND date(create_dt) >= date(#{extraParams.startDate})
+						</when>
+						<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+							AND date(#{extraParams.endDate}) >= date(create_dt)
+						</when>
+					</choose>
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipOsInfoByParam" parameterType="EquipOsInfo" resultMap="EquipOSResult" >
+		<include refid="selectEquipOs" />
+		<where>
+			<if test='recid > 0'>
+				AND recid = #{recid}
+			</if>
+			<if test='osName != null and osName != ""'>
+				AND os_name = #{osName}
+			</if>
+		</where>
+	</select>
+	
+	<insert id="insertEquipOs" parameterType="EquipOsInfo">
+		INSERT INTO os_info (
+			os_name,
+			architecture,
+			version,
+			create_dt,
+			create_ip,
+			create_user,
+			os_type
+		)
+		VALUES (
+			#{osName}, 
+			#{architecture},
+			#{version},
+			LOCALTIMESTAMP,
+			#{createIp},
+			#{createUser},
+			#{osType}
+		)
+	</insert>
+	
+	<update id="updateEquipOs" parameterType="EquipOsInfo">
+		UPDATE os_info SET
+			os_name = #{osName},
+			architecture = #{architecture},
+			version = #{version},
+			update_dt = LOCALTIMESTAMP,
+			update_ip = #{updateIp},
+			update_user = #{updateUser},
+			os_type = #{osType}
+		WHERE recid = #{recid}
+	</update>
+	
+	<delete id="deleteEquipOs" parameterType="int">
+		DELETE FROM os_info WHERE recid = #{recid}
+	</delete>
+	
+	<!-- 운영체제 정보 삭제 by recid 리스트-->
+	<delete id="deleteEquipOsByRecidList" parameterType="list">
+		DELETE FROM os_info
+		WHERE recid IN
+		<foreach collection="list" item="id"  open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+	
+	<update id="releaseEquipOsByIds" parameterType="list">
+		UPDATE equip_info SET
+			os_recid = 1
+		WHERE os_recid IN 
+		<foreach collection="list" item="id"  open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</update>
+</mapper>

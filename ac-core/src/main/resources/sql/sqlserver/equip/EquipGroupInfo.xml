@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipGroupInfoResult" type="EquipGroupInfo" >
+		<id column="recid" property="recid"/>
+		<result column="group_name" property="groupName"/>
+		<result column="group_path" property="groupPath"/>
+		<result column="parent_group_recid" property="parentGroupRecid"/>
+		<result column="create_dt" property="createDt"/>
+		<result column="create_ip" property="createIp"/>
+		<result column="create_user" property="createUser"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<!-- 장비 그룹 정보 조회 -->
+	<sql id="selectEquipGroupInfo">
+		SELECT EG.recid
+			, EG.group_name
+			, EG.group_path
+			, EG.parent_group_recid
+			, EG.create_dt
+			, EG.create_ip
+			, EG.create_user
+			, EG.update_dt
+			, EG.update_ip
+			, EG.update_user
+		FROM equip_group_info EG
+	</sql>
+	
+	<!--
+		모든 장비 그룹 정보 리스트
+		author : LeeJungYoung 
+		Date : 2015-06-22
+	 -->
+	<select id="selectEquipGroupListAll" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+		ORDER BY EG.group_name ASC
+	</select>
+	
+	<!-- 장비 그룹 정보 by recid -->
+	<select id="selectEquipGroupInfoByRecid" parameterType="int" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+		WHERE EG.recid = #{recid}
+	</select>
+	
+	<!-- 장비 그룹 정보 by 장비 id -->
+	<select id="selectEquipGroupInfoByEquipId" parameterType="int" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+			INNER JOIN equip_group_relation	EGR ON EGR.group_recid = EG.recid 
+			INNER JOIN equip_info			EI ON EI.recid = EGR.equip_recid
+		WHERE EI.recid = #{equipId}
+	</select>
+	
+	<!-- 장비 그룹 정보 조회 by 그룹 경로 -->
+	<select id="selectEquipGroupInfoByGroupPath" parameterType="string" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+		 WHERE EG.group_path = #{groupPath}
+	</select>
+	
+	<!-- 하위 그룹 정보 조회 by 상위 그룹 id -->
+	<select id="selectChildEquipGroupList" parameterType="int" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+		WHERE EG.parent_group_recid = #{recid}
+	</select>
+	
+	<!-- 같은 레벨 장비 그룹 조회 by recid -->
+	<select id="selectSiblingEquipGroupList" parameterType="int" resultMap="EquipGroupInfoResult">
+		<include refid="selectEquipGroupInfo"/>
+		INNER JOIN (SELECT parent_group_recid FROM equip_group_info WHERE recid = #{recid}) B
+			ON EG.parent_group_recid = B.parent_group_recid
+	</select>
+	
+	<!-- 모든 하위 장비 그룹 조회 by recid -->
+	<select id="selectAllChildEquipGroupList" parameterType="int" resultMap="EquipGroupInfoResult">
+		WITH result_sub_group AS
+		(
+			SELECT recid
+			FROM equip_group_info
+			WHERE recid = #{recid}
+			
+			UNION ALL
+			
+			SELECT A.recid 
+			FROM equip_group_info A
+				INNER JOIN result_sub_group B
+					ON A.parent_group_recid = B.recid
+		)
+		<include refid="selectEquipGroupInfo" />
+			INNER JOIN result_sub_group B ON EG.recid = B.recid
+	</select>
+	
+	<!-- 모든 상위 장비 그룹 조회 by recid -->
+	<select id="selectAllParentEquipGroupList" parameterType="int" resultMap="EquipGroupInfoResult">
+		WITH result_sub_group AS
+		(
+			SELECT recid, parent_group_recid
+			FROM equip_group_info
+			WHERE recid = #{recid}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.parent_group_recid
+			FROM equip_group_info A
+				INNER JOIN result_sub_group B
+					ON A.recid = B.parent_group_recid 
+		)
+		<include refid="selectEquipGroupInfo" />
+			INNER JOIN result_sub_group B ON EG.recid = B.recid
+	</select>
+	
+	<!-- 장비 그룹 정보 추가-->
+	<insert id="insertEquipGroupInfo" parameterType="EquipGroupInfo">
+		INSERT INTO equip_group_info (
+			group_name, group_path, parent_group_recid,
+			create_dt, create_ip, create_user
+		)
+		VALUES (
+			#{groupName} ,#{groupPath}, #{parentGroupRecid}
+			, getdate(), #{createIp}, #{createUser}
+		)
+	</insert>
+	
+	<!-- 장비 그룹 정보 수정 by recid -->
+	<update id="updateEquipGroupInfoByRecid" parameterType="EquipGroupInfo">
+		UPDATE equip_group_info SET
+			group_name = #{groupName}
+			, group_path = #{groupPath}
+			, update_dt = getdate()
+			, update_ip = #{updateIp}
+			, update_user = #{updateUser}
+		 WHERE recid = #{recid}
+	</update>
+	
+	<!-- 장비 그룹 정보 수정 by recid -->
+	<update id="updateEquipGroupInfoByRecidForMoveGroup" parameterType="EquipGroupInfo">
+		UPDATE equip_group_info SET
+			group_name = #{groupName}
+			, group_path = #{groupPath}
+			, parent_group_recid = #{parentGroupRecid}
+			, update_dt = getdate()
+			, update_ip = #{updateIp}
+			, update_user = #{updateUser}
+		WHERE recid = #{recid}
+	</update>
+	
+	<!-- 장비 그룹 경로 수정 -->
+	<update id="updateEquipGroupInfoByGroupPath" parameterType="map">
+		WITH subgroups AS (
+			SELECT recid, group_path
+			FROM equip_group_info
+			WHERE recid=#{recid}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.group_path
+			FROM equip_group_info A
+				INNER JOIN subgroups B ON A.parent_group_recid = B.recid
+		)
+		UPDATE equip_group_info SET
+			group_path = #{newGroupPath} + SUBSTRING(group_path, LEN(#{oldGroupPath}) + 1, LEN(group_path))
+		WHERE recid IN (
+			SELECT recid FROM subgroups
+		)
+	</update>
+	
+	<!-- 장비 그룹 정보 삭제 by recid -->
+	<delete id="deleteEquipGroupInfoByRecid" parameterType="int">
+		DELETE FROM equip_group_info
+		WHERE recid = #{recid}
+	</delete>
+	
+	<!-- 장비 그룹 정보 일괄 삭제 -->
+	<delete id="deleteEquipGroupInfoByIds" parameterType="list">
+		DELETE FROM equip_group_info
+		<where>
+			<if test="list != null and list.size > 0">
+				<foreach collection="list" item="id"  open="recid IN (" separator="," close=")">  
+					#{id} 
+				</foreach>
+			</if>
+		</where>
+	</delete>
+</mapper>

@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="ApprovalLogMap" type="ApprovalLog">
+		<id column="recid" property="recid"/>
+		<result column="req_type" property="reqType"/>
+		<result column="user_recid" property="userRecid"/>
+		<result column="user_id" property="userId"/>
+		<result column="equip_recid" property="equipRecid"/>
+		<result column="equip_name" property="equipName"/>
+		<result column="equip_ip" property="equipIp"/>
+		<result column="equip_account_name" property="equipAccountName"/>
+		<result column="worker_name" property="workerName"/>
+		<result column="worker_tel" property="workerTel"/>
+		<result column="worker_group" property="workerGroup"/>
+		<result column="req_data" property="reqData"/>
+		<result column="remote_ip" property="remoteIp"/>
+		<result column="success" property="success"/>
+		<result column="result_code" property="resultCode"/>
+		<result column="result_msg" property="resultMsg"/>
+		<result column="create_dt" property="createDt"/>
+	</resultMap>
+	
+	<resultMap id="ApprovalDetialLogMap" type="ApprovalDetailLog">
+		<id column="recid" property="recid"/>
+		<result column="log_recid" property="logRecid"/>
+		<result column="log_type" property="logType"/>
+		<result column="message" property="message"/>
+		<result column="create_dt" property="createDt"/>
+	</resultMap>
+	
+	<insert id="insertApprovalLog" parameterType="ApprovalLog" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO ars_approval_log(
+			req_type, user_recid, user_id, 
+			equip_recid, equip_name, equip_ip, equip_account_name,
+			worker_name, worker_tel, worker_group,
+			req_data, 	remote_ip, success, result_code, result_msg, create_dt)
+		VALUES (
+			#{reqType}, #{userRecid}, #{userId},
+			#{equipRecid}, #{equipName}, #{equipIp}, #{equipAccountName},
+			#{workerName}, #{workerTel}, #{workerGroup},
+			#{reqData}, #{remoteIp}, #{success}, #{resultCode}, #{resultMsg}, GETDATE())
+	</insert>
+	
+	<insert id="insertApprovalDetailLog" parameterType="ApprovalDetailLog">
+		INSERT INTO ars_approval_detail_log(log_recid, log_type, message, create_dt)
+		VALUES (#{logRecid}, #{logType}, #{message}, GETDATE())
+	</insert>
+	
+	<update id="updateApprovalLog" parameterType="ApprovalLog">
+		UPDATE ars_approval_log
+		<set>
+			<if test="userRecid > 0">
+				user_recid = #{userRecid},
+			</if>
+			<if test="userId != null and userId != ''">
+				user_id = #{userId},
+			</if>
+			<if test="equipRecid> 0">
+				equip_recid = #{equipRecid},
+			</if>
+			<if test="equipName != null and equipName != ''">
+				equip_name = #{equipName},
+			</if>
+			<if test="equipIp != null and equipIp != ''">
+				equip_ip = #{equipIp},
+			</if>
+			<if test="equipAccountName != null and equipAccountName != ''">
+				equip_account_name = #{equipAccountName},
+			</if>
+			<if test="workerName != null and workerName != ''">
+				worker_name = #{workerName},
+			</if>
+			<if test="workerTel != null and workerTel != ''">
+				worker_tel = #{workerTel},
+			</if>
+			<if test="workerGroup != null and workerGroup != ''">
+				worker_group = #{workerGroup},
+			</if>
+			<if test="reqData != null and reqData != ''">
+				req_data = #{reqData},
+			</if>
+			<if test="remoteIp != null and remoteIp != ''">
+				remote_ip = #{remoteIp},
+			</if>
+			<if test="resultCode != null and resultCode != ''">
+				result_code = #{resultCode},
+			</if>
+			<if test="resultMsg != null and resultMsg != ''">
+				result_msg = #{resultMsg},
+			</if>
+			success = #{success},
+			create_dt = getdate()
+		</set>
+		WHERE recid=#{recid}
+	</update>
+	
+	<select id="getArsApprovalLogListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(0)
+		FROM ars_approval_log
+		<where>
+			<if test="extraParams != null">
+				<if test="extraParams.equipList != null and extraParams.equipList.size > 0">
+					<foreach collection="extraParams.equipList" item="id"  open="AND equip_recid IN (" separator="," close=")">
+						#{id}
+					</foreach>
+				</if>
+				<choose>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+						AND CONVERT(date, create_dt) BETWEEN CONVERT(date, #{extraParams.startDate}) AND CONVERT(date, #{extraParams.endDate})
+					</when>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+						AND CONVERT(date, create_dt) >= CONVERT(date, #{extraParams.startDate})
+					</when>
+					<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+						AND CONVERT(date, #{extraParams.endDate}) >= CONVERT(date, create_dt)
+					</when>
+				</choose>
+			</if>
+			<if test="entity.equipName != null and entity.equipName != '' ">
+				AND equip_name LIKE '%' + #{entity.equipName} + '%'
+			</if>
+			<if test="entity.equipIp != null and entity.equipIp != '' ">
+				AND equip_ip LIKE '%' + #{entity.equipIp} + '%'
+			</if>
+			<if test="entity.equipAccountName != null and entity.equipAccountName != '' ">
+				AND equip_account_name LIKE '%' + #{entity.equipAccountName} + '%'
+			</if>
+			<if test="entity.workerName != null and entity.workerName != '' ">
+				AND worker_name LIKE '%' + #{entity.workerName} + '%'
+			</if>
+			<if test="entity.userId != null and entity.userId != '' ">
+				AND user_id LIKE '%' + #{entity.userId} + '%'
+			</if>
+			<if test="entity.userRecid > 0">
+				AND user_recid = #{entity.userRecid}
+			</if>
+			<if test="entity.reqType != null and entity.reqType > 0">
+				AND req_type = #{entity.reqType} 
+			</if>
+			<if test="entity.success != null">
+				AND success = #{entity.success} 
+			</if>
+		</where>
+	</select>
+	
+	<select id="getArsApprovalLogList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="ApprovalLogMap">
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER (ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum,
+				recid,
+				req_type,
+				user_recid,
+				user_id,
+				equip_recid,
+				equip_name,
+				equip_ip,
+				equip_account_name,
+				worker_name,
+				worker_tel,
+				worker_group,
+				req_data,
+				remote_ip,
+				success,
+				result_code,
+				result_msg,
+				create_dt
+			FROM ars_approval_log
+			<where>
+				<if test="extraParams != null">
+					<if test="extraParams.equipList != null and extraParams.equipList.size > 0">
+						<foreach collection="extraParams.equipList" item="id"  open="AND equip_recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+					<choose>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+							AND CONVERT(date, create_dt) BETWEEN CONVERT(date, #{extraParams.startDate}) AND CONVERT(date, #{extraParams.endDate})
+						</when>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+							AND CONVERT(date, create_dt) >= CONVERT(date, #{extraParams.startDate})
+						</when>
+						<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+							AND CONVERT(date, #{extraParams.endDate}) >= CONVERT(date, create_dt)
+						</when>
+					</choose>
+				</if>
+				<if test="entity.equipName != null and entity.equipName != '' ">
+					AND equip_name LIKE '%' + #{entity.equipName} + '%'
+				</if>
+				<if test="entity.equipIp != null and entity.equipIp != '' ">
+					AND equip_ip LIKE '%' + #{entity.equipIp} + '%'
+				</if>
+				<if test="entity.equipAccountName != null and entity.equipAccountName != '' ">
+					AND equip_account_name LIKE '%' + #{entity.equipAccountName} + '%'
+				</if>
+				<if test="entity.workerName != null and entity.workerName != '' ">
+					AND worker_name LIKE '%' + #{entity.workerName} + '%'
+				</if>
+				<if test="entity.userId != null and entity.userId != '' ">
+					AND user_id LIKE '%' + #{entity.userId} + '%'
+				</if>
+				<if test="entity.userRecid > 0">
+					AND user_recid = #{entity.userRecid}
+				</if>
+				<if test="entity.reqType != null and entity.reqType > 0">
+					AND req_type = #{entity.reqType} 
+				</if>
+				<if test="entity.success != null">
+					AND success = #{entity.success} 
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getArsApprovalLogInfo" parameterType="int" resultMap="ApprovalLogMap">
+		SELECT
+			recid,
+			req_type,
+			user_recid,
+			user_id,
+			equip_recid,
+			equip_name,
+			equip_ip,
+			equip_account_name,
+			worker_name,
+			worker_tel,
+			worker_group,
+			req_data,
+			remote_ip,
+			success,
+			result_code,
+			result_msg,
+			create_dt
+		FROM ars_approval_log
+		WHERE recid = #{recid}
+	</select>
+	
+	<!--getArsApprovalDetailList  -->
+	<select id="getArsApprovalDetailList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="ApprovalDetialLogMap">
+		SELECT
+			recid,
+			log_recid,
+			log_type,
+			message,
+			create_dt
+		FROM ars_approval_detail_log 
+		WHERE log_recid = #{entity.logRecid}
+		<if test="sort != null">
+			ORDER BY ${sort.sortFieldNm} ${sort.sortDir}
+		</if>
+	</select>
+</mapper>

@@ -1,0 +1,1331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	
+	<!-- 사용자 인증 정책 정보 테이블 resultMap -->
+	<resultMap id="Equip2FactPolicyMap" type="Equip2FactPolicy">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="auth_types" property="authTypes" />
+	</resultMap>
+	
+	<resultMap id="policyObjectResultMap" type="PolicyObject">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="type" property="type" />
+		<result column="referenced_recid" property="referencedRecid" />
+		<result column="filter" property="filter" />
+		<result column="priority" property="priority" />
+	</resultMap>
+	
+	<!-- 사용자 인증 정책 리스트 테이블 resultMap -->
+	<resultMap id="UserAuthPolicyListMap" type="UserAuthPolicyList">
+		<id column="object_recid" property="objectRecid" />
+		<result column="object_type" property="objectType" />
+		<result column="object_referenced_recid" property="objectReferencedRecid" />
+		<result column="user_group_name" property="userGroupName" />
+		<result column="user_group_path" property="userGroupPath" />
+		<result column="user_name" property="userName" />
+		<result column="user_id" property="userId" />
+		
+		<result column="target_recid" property="targetRecid" />
+		<result column="target_type" property="targetType" />
+		<result column="target_referenced_recid" property="targetReferencedRecid" />
+		<result column="equip_group_name" property="equipGroupName" />
+		<result column="equip_group_path" property="equipGroupPath" />
+		<result column="equip_name" property="equipName" />
+		<result column="ip_primary" property="equipIp" />
+		<result column="equip_account_name" property="equipAccountName" />
+		<result column="domain" property="domain" />
+		
+		<result column="policy_name" property="policyName" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="auth_types" property="authTypes" />
+		
+	</resultMap>
+	
+	<!-- //////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////
+	equip_2Fact_policy 테이블 관련 
+	//////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////// -->
+	
+	<select id="selectEquip2FactPolicyInfo" parameterType="int" resultMap="Equip2FactPolicyMap">
+		SELECT 
+			recid,
+			policy_recid,
+			auth_types
+		FROM equip_2fact_policy
+		WHERE policy_recid = #{policyRecid}
+	</select>
+	
+	<!-- 정책 설정 추가 [장비 2차인증 정책 ('2FACT_EQUIP_POLICY')] -->
+	<insert id="insertPolicyConfigForPolicy2FactEquip" parameterType="hashmap">
+		INSERT INTO equip_2fact_policy
+			(
+				policy_recid,
+				auth_types
+			)
+		VALUES
+		(
+			CAST(#{policyRecid} AS INT),
+			CAST(#{authTypes} AS INT)
+		)
+	</insert>
+	
+	<!-- 정책 설정 수정 [장비 2차인증 정책 ('2FACT_EQUIP_POLICY')] -->
+	<update id="updatePolicyConfigForPolicy2FactEquip" parameterType="hashmap">
+		UPDATE equip_2fact_policy SET
+			auth_types =  CAST(#{authTypes} AS INT)
+		WHERE policy_recid = CAST(#{recid} AS INT)
+	</update>
+	
+	<delete id="deleteEquip2FactPolicyInfo" parameterType="int">
+		DELETE FROM equip_2fact_policy
+		WHERE policy_recid = #{policyRecid}
+	</delete>
+	
+	<!-- //////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////
+	equip_2Fact_policy 테이블 관련 END
+	//////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////// -->
+	
+	<!-- //////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////
+	사용자 인증 정책 
+	//////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////// -->
+	
+	<insert id="insertUserAuthPolicy" parameterType="hashmap">
+		INSERT INTO policy_target
+			(
+				object_recid,
+				type,
+				referenced_recid,
+				filter,
+				priority
+			)
+		VALUES
+		<foreach collection="targetReferencedRecids" item="id" separator=",">  
+			(
+				CAST(#{objectRecid} AS INT),
+				CAST(#{targetType} AS INT),
+				CAST(#{id} AS INT),
+				1,
+				0
+			)
+		</foreach>
+	</insert>
+	
+	<select id="selectUserAuthPolicyListForSuperManager" parameterType="hashmap" resultMap="UserAuthPolicyListMap">
+		WITH user_group_info_data AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA 
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name,
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			object_recid,
+			object_type,
+			object_referenced_recid,
+			user_group_name,
+			user_group_path,
+			user_name,
+			user_id,
+			target_recid,
+			target_type,
+			target_referenced_recid,
+			equip_group_name,
+			equip_group_path,
+			equip_name,
+			ip_primary,
+			equip_account_name,
+			domain,
+			policy_name,
+			policy_recid,
+			auth_types
+		FROM (
+			SELECT Row_Number() over(Order by ${sort} ${dir})as rownum, 
+				object_recid,
+				object_type,
+				object_referenced_recid,
+				user_group_name,
+				user_group_path,
+				user_name,
+				user_id,
+				target_recid,
+				target_type,
+				target_referenced_recid,
+				equip_group_name,
+				equip_group_path,
+				equip_name,
+				ip_primary,
+				equip_account_name,
+				domain,
+				policy_name,
+				policy_recid,
+				auth_types
+			FROM all_data
+			<trim prefix="WHERE" prefixOverrides="AND | OR">
+				<if test="userName != null and userName != '' ">
+					AND user_name ILIKE '%' || #{userName} || '%'
+				</if>
+				<if test="userId != null and userId != '' ">
+					AND user_id ILIKE '%' || #{userId} || '%'
+				</if>
+				<if test="userGroupName != null and userGroupName != '' ">
+					AND user_group_name ILIKE '%' || #{userGroupName} || '%'
+				</if>
+				<if test="userGroupPath != null and userGroupPath != '' ">
+					AND user_group_path ILIKE '%' || #{userGroupPath} || '%'
+				</if>
+				<if test="equipGroupName != null and equipGroupName != '' ">
+					AND equip_group_name ILIKE '%' || #{equipGroupName} || '%'
+				</if>
+				<if test="equipGroupPath != null and equipGroupPath != '' ">
+					AND equip_group_path ILIKE '%' || #{equipGroupPath} || '%'
+				</if>
+				<if test="equipName != null and equipName != '' ">
+					AND equip_name ILIKE '%' || #{equipName} || '%'
+				</if>
+				<if test="ipPrimary != null and ipPrimary != '' ">
+					AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+				</if>
+				<if test="equipAccountName != null and equipAccountName != '' ">
+					AND equip_account_name ILIKE '%' || #{equipAccountName} || '%'
+				</if>
+				<if test="domain != null and domain != '' ">
+					AND domain ILIKE '%' || #{domain} || '%'
+				</if>
+				<if test="policyName != null and policyName != '' ">
+					AND policy_name ILIKE '%' || #{policyName} || '%'
+				</if>
+				<if test="authTypes != null and authTypes != '' ">
+					AND auth_types ILIKE '%' || #{authTypes} || '%'
+				</if>
+			</trim>
+		)N
+		<if test="startPage != null and endPage != null ">
+			WHERE N.rownum between ${startPage} and ${endPage}
+		</if>
+	</select>
+	
+	<select id="selectUserAuthPolicyListCntForSuperManager" parameterType="hashmap" resultType="int">
+		WITH user_group_info_data AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT 
+					
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name, 
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			COUNT(0)
+		FROM all_data
+		<trim prefix="WHERE" prefixOverrides="AND | OR">
+			<if test="userName != null and userName != '' ">
+				AND user_name ILIKE '%' || #{userName} || '%'
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND user_id ILIKE '%' || #{userId} || '%'
+			</if>
+			<if test="userGroupName != null and userGroupName != '' ">
+				AND user_group_name ILIKE '%' || #{userGroupName} || '%'
+			</if>
+			<if test="userGroupPath != null and userGroupPath != '' ">
+				AND user_group_path ILIKE '%' || #{userGroupPath} || '%'
+			</if>
+			<if test="equipGroupName != null and equipGroupName != '' ">
+				AND equip_group_name ILIKE '%' || #{equipGroupName} || '%'
+			</if>
+			<if test="equipGroupPath != null and equipGroupPath != '' ">
+				AND equip_group_path ILIKE '%' || #{equipGroupPath} || '%'
+			</if>
+			<if test="equipName != null and equipName != '' ">
+				AND equip_name ILIKE '%' || #{equipName} || '%'
+			</if>
+			<if test="ipPrimary != null and ipPrimary != '' ">
+				AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+			</if>
+			<if test="equipAccountName != null and equipAccountName != '' ">
+				AND equip_account_name ILIKE '%' || #{equipAccountName} || '%'
+			</if>
+			<if test="domain != null and domain != '' ">
+				AND domain ILIKE '%' || #{domain} || '%'
+			</if>
+			<if test="policyName != null and policyName != '' ">
+				AND policy_name ILIKE '%' || #{policyName} || '%'
+			</if>
+			<if test="authTypes != null and authTypes != '' ">
+				AND auth_types ILIKE '%' || #{authTypes} || '%'
+			</if>
+		</trim>
+	</select>
+	
+	<!--/////////////////////////////////////////////////////////////////////////////////////////////////////
+	관리자 조회 (2016.01.14 LJY)
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////-->
+	<select id="selectUserAuthPolicyListForManager" parameterType="hashmap" resultMap="UserAuthPolicyListMap">
+		WITH user_group_info_data (group_recid, group_name, group_path)AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_recid, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.recid, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA 
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT 
+					
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name,
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_recid
+						WHEN PO.type = 2 THEN UID.group_recid
+						ELSE 0 END 
+				) as user_group_recid,
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.group_recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			object_recid,
+			object_type,
+			object_referenced_recid,
+			user_group_recid,
+			user_group_name,
+			user_group_path,
+			user_name,
+			user_id,
+			target_recid,
+			target_type,
+			target_referenced_recid,
+			equip_group_name,
+			equip_group_path,
+			equip_name,
+			ip_primary,
+			equip_account_name,
+			domain,
+			policy_name,
+			policy_recid,
+			auth_types
+		FROM (
+			SELECT Row_Number() over(Order by ${sort} ${dir}) as rownum, 
+				object_recid,
+				object_type,
+				object_referenced_recid,
+				user_group_recid,
+				user_group_name,
+				user_group_path,
+				user_name,
+				user_id,
+				target_recid,
+				target_type,
+				target_referenced_recid,
+				equip_group_name,
+				equip_group_path,
+				equip_name,
+				ip_primary,
+				equip_account_name,
+				domain,
+				policy_name,
+				policy_recid,
+				auth_types
+			FROM all_data
+			WHERE user_group_recid IN(${userGroupRecids}) 
+			<if test="userName != null and userName != '' ">
+				AND user_name ILIKE '%' || #{userName} || '%'
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND user_id ILIKE '%' || #{userId} || '%'
+			</if>
+			<if test="userGroupName != null and userGroupName != '' ">
+				AND user_group_name ILIKE '%' || #{userGroupName} || '%'
+			</if>
+			<if test="userGroupPath != null and userGroupPath != '' ">
+				AND user_group_path ILIKE '%' || #{userGroupPath} || '%'
+			</if>
+			<if test="equipGroupName != null and equipGroupName != '' ">
+				AND equip_group_name ILIKE '%' || #{equipGroupName} || '%'
+			</if>
+			<if test="equipGroupPath != null and equipGroupPath != '' ">
+				AND equip_group_path ILIKE '%' || #{equipGroupPath} || '%'
+			</if>
+			<if test="equipName != null and equipName != '' ">
+				AND equip_name ILIKE '%' || #{equipName} || '%'
+			</if>
+			<if test="ipPrimary != null and ipPrimary != '' ">
+				AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+			</if>
+			<if test="equipAccountName != null and equipAccountName != '' ">
+				AND equip_account_name ILIKE '%' || #{equipAccountName} || '%'
+			</if>
+			<if test="domain != null and domain != '' ">
+				AND domain ILIKE '%' || #{domain} || '%'
+			</if>
+			<if test="policyName != null and policyName != '' ">
+				AND policy_name ILIKE '%' || #{policyName} || '%'
+			</if>
+			<if test="authTypes != null and authTypes != '' ">
+				AND auth_types ILIKE '%' || #{authTypes} || '%'
+			</if>
+		)N
+		<if test="startPage != null and endPage != null ">
+			WHERE N.rownum between ${startPage} and ${endPage}
+		</if>
+	</select>
+	
+	<select id="selectUserAuthPolicyListCntForManager" parameterType="hashmap" resultType="int">
+		WITH user_group_info_data (group_recid, group_name, group_path)AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_recid, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.recid, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT 
+					
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name,
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_recid
+						WHEN PO.type = 2 THEN UID.group_recid
+						ELSE 0 END 
+				) as user_group_recid,
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.group_recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			COUNT(0)
+		FROM all_data
+		WHERE user_group_recid IN(${userGroupRecids}) 
+		<if test="userName != null and userName != '' ">
+			AND user_name ILIKE '%' || #{userName} || '%'
+		</if>
+		<if test="userId != null and userId != '' ">
+			AND user_id ILIKE '%' || #{userId} || '%'
+		</if>
+		<if test="userGroupName != null and userGroupName != '' ">
+			AND user_group_name ILIKE '%' || #{userGroupName} || '%'
+		</if>
+		<if test="userGroupPath != null and userGroupPath != '' ">
+			AND user_group_path ILIKE '%' || #{userGroupPath} || '%'
+		</if>
+		<if test="equipGroupName != null and equipGroupName != '' ">
+			AND equip_group_name ILIKE '%' || #{equipGroupName} || '%'
+		</if>
+		<if test="equipGroupPath != null and equipGroupPath != '' ">
+			AND equip_group_path ILIKE '%' || #{equipGroupPath} || '%'
+		</if>
+		<if test="equipName != null and equipName != '' ">
+			AND equip_name ILIKE '%' || #{equipName} || '%'
+		</if>
+		<if test="ipPrimary != null and ipPrimary != '' ">
+			AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+		</if>
+		<if test="equipAccountName != null and equipAccountName != '' ">
+			AND equip_account_name ILIKE '%' || #{equipAccountName} || '%'
+		</if>
+		<if test="domain != null and domain != '' ">
+			AND domain ILIKE '%' || #{domain} || '%'
+		</if>
+		<if test="policyName != null and policyName != '' ">
+			AND policy_name ILIKE '%' || #{policyName} || '%'
+		</if>
+		<if test="authTypes != null and authTypes != '' ">
+			AND auth_types ILIKE '%' || #{authTypes} || '%'
+		</if>
+	</select>
+	<!--/////////////////////////////////////////////////////////////////////////////////////////////////////
+	관리자 조회 (2016.01.14 LJY) END
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////-->
+	
+	<!--해당 조건의 사용자 인증 정책 가져오기 -->
+	<select id="selectUserAuthPolicyInfoForSuperManager" parameterType="hashmap" resultMap="UserAuthPolicyListMap">
+		
+		WITH user_group_info_data AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA 
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT 
+					
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name, 
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			object_recid,
+			object_type,
+			object_referenced_recid,
+			user_group_name,
+			user_group_path,
+			user_name,
+			user_id,
+			target_recid,
+			target_type,
+			target_referenced_recid,
+			equip_group_name,
+			equip_group_path,
+			equip_name,
+			ip_primary,
+			equip_account_name,
+			domain,
+			policy_name,
+			policy_recid,
+			auth_types
+		FROM all_data
+		<trim prefix="WHERE" prefixOverrides="AND | OR">
+			<if test="objectType != null and objectType != '' ">
+				AND object_type = CAST(#{objectType} AS INT)
+			</if>
+			<if test="objectRecid != null and objectRecid != '' ">
+				AND object_recid = CAST(#{objectRecid} AS INT)
+			</if>
+			<if test="objectReferencedRecid != null and objectReferencedRecid != '' ">
+				AND object_referenced_recid = CAST(#{objectReferencedRecid} AS INT)
+			</if>
+			<if test="targetType != null and targetType != '' ">
+				AND target_type = CAST(#{targetType} AS INT)
+			</if>
+			<if test="policyRecid != null and policyRecid != '' ">
+				AND policy_recid = CAST(#{policyRecid} AS INT)
+			</if>
+			<if test="targetReferencedRecids != null">
+				AND target_referenced_recid IN 
+				<foreach collection="targetReferencedRecids" item="id"  open="(" separator="," close=")">
+					CAST(#{id} AS INT) 
+				</foreach>
+			</if>
+		</trim>
+		ORDER BY policy_name ASC
+	</select>
+	
+	<!--해당 조건의 사용자 인증 정책 가져오기 -->
+	<select id="selectUserAuthPolicyInfoExportForSuperManager" parameterType="hashmap" resultMap="UserAuthPolicyListMap">
+		
+		WITH user_group_info_data AS (
+			SELECT recid, group_name, group_path
+			FROM user_group_info
+		),
+		user_info_data(recid, user_id, user_name, group_name, group_path) AS(
+			SELECT UI.recid, UI.user_id, UI.user_name, UG.group_name, UG.group_path
+			FROM user_info UI
+			INNER JOIN user_group_relation UGR
+			ON UI.recid = UGR.user_recid
+			INNER JOIN user_group_info UG
+			ON UG.recid = UGR.group_recid
+		),
+		equip_info_data (recid, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EI.recid, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_info EI
+			INNER JOIN equip_group_relation EGR
+			ON EI.recid = EGR.equip_recid 
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_group_info_data AS(
+			SELECT recid, group_name, group_path
+			FROM equip_group_info
+		),
+		equip_account_info_data (recid, account, domain, equip_name, ip_primary, group_name, group_path) AS(
+			SELECT EA.recid, EA.account, EA.domain, EI.equip_name, EI.ip_primary, EG.group_name, EG.group_path
+			FROM equip_account EA 
+			INNER JOIN equip_info EI
+			ON EI.recid = EA.equip_recid
+			INNER JOIN equip_group_relation EGR
+			ON EGR.equip_recid = EI.recid
+			INNER JOIN equip_group_info EG
+			ON EG.recid = EGR.group_recid
+		),
+		equip_2fact_policy_data AS(
+			SELECT policy_recid, auth_types
+			FROM equip_2fact_policy
+		),
+		all_data AS (
+			SELECT 
+					
+				PO.recid as object_recid,
+				PO.type as object_type,
+				PO.referenced_recid as object_referenced_recid,
+				PT.recid as target_recid,
+				PT.type as target_type,
+				PT.referenced_recid as target_referenced_recid,
+				PL.policy_name, 
+				PL.recid as policy_recid,
+				ETPD.auth_types,
+				
+				( 
+					CASE 
+						WHEN PO.type = 1 THEN UGID.group_name
+						WHEN PO.type = 2 THEN UID.group_name
+						ELSE '' END 
+				) as user_group_name,
+				( CASE 
+						WHEN PO.type = 1 THEN 	UGID.group_path
+						WHEN PO.type = 2 THEN 	UID.group_path
+						ELSE '' END 
+				) as user_group_path,
+				( CASE WHEN PO.type = 2 THEN UID.user_name	ELSE '' END ) as user_name,
+				( CASE WHEN PO.type = 2 THEN UID.user_id	ELSE '' END ) as user_id,
+					
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_name
+						WHEN PT.type = 4 THEN EID.group_name
+						WHEN PT.type = 5 THEN EAID.group_name
+						ELSE '' END
+				) as equip_group_name,
+				( 
+					CASE 
+						WHEN PT.type = 3 THEN EGID.group_path
+						WHEN PT.type = 4 THEN EID.group_path
+						WHEN PT.type = 5 THEN EAID.group_path
+						ELSE '' END
+				) as equip_group_path,
+				
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.equip_name
+						WHEN PT.type = 5 THEN EAID.equip_name
+						ELSE '' END 
+				) as equip_name,
+				( 
+					CASE 
+						WHEN PT.type = 4 THEN EID.ip_primary
+						WHEN PT.type = 5 THEN EAID.ip_primary
+						ELSE '' END 
+				) as ip_primary,
+				( CASE WHEN PT.type = 5 THEN EAID.account	ELSE '' END ) as equip_account_name,
+				( CASE WHEN PT.type = 5 THEN EAID.domain	ELSE '' END ) as domain
+
+			FROM policy_object PO
+
+			INNER JOIN policy_list PL
+			ON PO.policy_recid = PL.recid
+			
+			INNER JOIN equip_2fact_policy_data ETPD
+			ON PL.recid = ETPD.policy_recid
+
+			INNER JOIN policy_target PT
+			ON PO.recid = PT.object_recid
+
+			LEFT OUTER JOIN user_group_info_data UGID
+			ON UGID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN user_info_data UID
+			ON UID.recid = PO.referenced_recid
+
+			LEFT OUTER JOIN equip_group_info_data EGID
+			ON EGID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_info_data EID
+			ON EID.recid = PT.referenced_recid
+
+			LEFT OUTER JOIN equip_account_info_data EAID
+			ON EAID.recid = PT.referenced_recid
+
+			WHERE PL.policy_id = '2FACT_EQUIP_POLICY'
+		)
+		SELECT
+			object_recid,
+			object_type,
+			object_referenced_recid,
+			user_group_name,
+			user_group_path,
+			user_name,
+			user_id,
+			target_recid,
+			target_type,
+			target_referenced_recid,
+			equip_group_name,
+			equip_group_path,
+			equip_name,
+			ip_primary,
+			equip_account_name,
+			domain,
+			policy_name,
+			policy_recid,
+			auth_types
+		FROM all_data
+		<trim prefix="WHERE" prefixOverrides="AND | OR">
+			<if test="userName != null and userName != '' ">
+				AND user_name ILIKE '%' || #{userName} || '%'
+			</if>
+			<if test="userId != null and userId != '' ">
+				AND user_id ILIKE '%' || #{userId} || '%'
+			</if>
+			<if test="userGroupName != null and userGroupName != '' ">
+				AND user_group_name ILIKE '%' || #{userGroupName} || '%'
+			</if>
+			<if test="userGroupPath != null and userGroupPath != '' ">
+				AND user_group_path ILIKE '%' || #{userGroupPath} || '%'
+			</if>
+			<if test="equipGroupName != null and equipGroupName != '' ">
+				AND equip_group_name ILIKE '%' || #{equipGroupName} || '%'
+			</if>
+			<if test="equipGroupPath != null and equipGroupPath != '' ">
+				AND equip_group_path ILIKE '%' || #{equipGroupPath} || '%'
+			</if>
+			<if test="equipName != null and equipName != '' ">
+				AND equip_name ILIKE '%' || #{equipName} || '%'
+			</if>
+			<if test="ipPrimary != null and ipPrimary != '' ">
+				AND ip_primary ILIKE '%' || #{ipPrimary} || '%'
+			</if>
+			<if test="equipAccountName != null and equipAccountName != '' ">
+				AND equip_account_name ILIKE '%' || #{equipAccountName} || '%'
+			</if>
+			<if test="domain != null and domain != '' ">
+				AND domain ILIKE '%' || #{domain} || '%'
+			</if>
+			<if test="policyName != null and policyName != '' ">
+				AND policy_name ILIKE '%' || #{policyName} || '%'
+			</if>
+			<if test="authTypes != null and authTypes != '' ">
+				AND auth_types ILIKE '%' || #{authTypes} || '%'
+			</if>
+		</trim>
+		ORDER BY policy_name ASC
+	</select>
+	
+	<select id="checkPolicyObjectByPolicyList" parameterType="hashmap" resultMap="policyObjectResultMap">
+		SELECT 
+			recid,
+			policy_recid,
+			type,
+			referenced_recid,
+			filter,
+			priority
+		FROM policy_object
+		WHERE policy_recid = CAST(#{policyRecid} AS INT)
+		AND type = CAST(#{objectType} AS INT)
+		AND referenced_recid = CAST(#{objectReferencedRecid} AS INT)
+	</select>
+	
+	<delete id="deletePolicyTargetForUserAuthPolicy" parameterType="hashmap">
+		DELETE FROM policy_target PT
+		USING policy_object PO
+		WHERE PT.object_recid = PO.recid
+		AND PO.referenced_recid = CAST(#{objectReferencedRecid} AS INT)
+		AND PO.type = CAST(#{objectType} AS INT)
+		<if test="targetType != null and targetType != '' ">
+			AND PT.type = CAST(#{targetType} AS INT)
+		</if>
+		<if test="targetType != null and targetType != '' ">
+			AND PT.referenced_recid IN
+		</if>
+		<if test="targetReferencedRecids != null">
+			<foreach collection="targetReferencedRecids" item="id"  open="(" separator="," close=")">  
+				CAST(#{id} AS INT) 
+			</foreach>
+		</if>
+	</delete>
+	
+	<delete id="deletePolicyObjectForUserAuthPolicy" parameterType="hashmap">
+		DELETE FROM policy_object
+		WHERE referenced_recid = CAST(#{objectReferencedRecid} AS INT)
+		AND type = CAST(#{objectType} AS INT)
+		<if test="objectRecid != null and objectRecid != '' ">
+			AND recid = CAST(#{objectRecid} AS INT)
+		</if>
+	</delete>
+	
+	<!-- 사용자 장비 접근 2차 인증 정책 일괄 삭제(엑셀 임포트시 사용) 2016.1.26 swcho -->
+	<!-- object와 target에 매칭되는 2FACT_EQUIP_POLICY인 정책을 찾은 후에 
+		policy_target에서 지운 다음 policy_target이 지워지면서 return하는 object_recid를 통해 policy_object에서 지운다 -->
+	<delete id="deleteAllEquip2FactPolicyTarget">
+		WITH targets AS (
+			SELECT PO.recid AS object_recid 
+				 , PT.recid AS target_recid
+			  FROM policy_object	PO
+		INNER JOIN policy_list		PL	ON	PO.policy_recid = PL.recid
+		INNER JOIN policy_target	PT	ON	PO.recid = PT.object_recid
+			 WHERE policy_id = '2FACT_EQUIP_POLICY'
+		)
+	   DELETE FROM policy_target
+			 WHERE recid IN ( SELECT target_recid FROM targets )  
+	</delete>
+	
+	<delete id="deleteAllEquip2FactPolicyObject">
+		WITH targets AS (
+			SELECT PO.recid AS object_recid 
+				 , PT.recid AS target_recid
+			  FROM policy_object	PO
+		INNER JOIN policy_list		PL	ON	PO.policy_recid = PL.recid
+		INNER JOIN policy_target	PT	ON	PO.recid = PT.object_recid
+			 WHERE policy_id = '2FACT_EQUIP_POLICY'
+		)
+		DELETE FROM policy_object
+			 WHERE recid IN ( SELECT object_recid FROM targets )
+	</delete>
+	
+	<!-- //////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////
+	사용자 인증 정책 END
+	//////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////// -->
+	
+	
+</mapper>

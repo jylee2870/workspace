@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="AuthLogMap" type="AuthLog">
+		<id column="recid" property="recid"/>
+		<result column="auth_method" property="authMethod"/>
+		<result column="req_type" property="reqType"/>
+		<result column="user_recid" property="userRecid"/>
+		<result column="user_id" property="userId"/>
+		<result column="equip_recid" property="equipRecid"/>
+		<result column="equip_name" property="equipName"/>
+		<result column="equip_ip" property="equipIp"/>
+		<result column="equip_account_name" property="equipAccountName"/>
+		<result column="remote_ip" property="remoteIp"/>
+		<result column="success" property="success"/>
+		<result column="result_code" property="resultCode"/>
+		<result column="auth_data" property="authData"/>
+		<result column="result_msg" property="resultMsg"/>
+		<result column="create_dt" property="createDt"/>
+	</resultMap>
+	
+	<resultMap id="AuthDetialLogMap" type="AuthDetailLog">
+		<id column="recid" property="recid"/>
+		<result column="log_recid" property="logRecid"/>
+		<result column="log_type" property="logType"/>
+		<result column="message" property="message"/>
+		<result column="create_dt" property="createDt"/>
+	</resultMap>
+	
+	<insert id="insertAuthLog" parameterType="AuthLog" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO auth_log(
+			auth_method, req_type, 
+			user_recid, user_id, 
+			equip_recid, equip_name, equip_ip, equip_account_name,
+			remote_ip, auth_data, success, result_code, result_msg, create_dt)
+		VALUES (
+			#{authMethod}, #{reqType},
+			#{userRecid}, #{userId},
+			#{equipRecid}, #{equipName}, #{equipIp}, #{equipAccountName},
+			#{remoteIp}, #{authData}, #{success}, #{resultCode}, #{resultMsg}, LOCALTIMESTAMP)
+	</insert>
+	
+	<insert id="insertAuthDetailLog" parameterType="AuthDetailLog">
+		INSERT INTO auth_detail_log(log_recid, log_type, message, create_dt)
+		VALUES (#{logRecid}, #{logType}, #{message}, LOCALTIMESTAMP)
+	</insert>
+	
+	<update id="updateAuthLog" parameterType="AuthLog">
+		UPDATE auth_log SET
+		<trim suffixOverrides=",">
+			<if test="userRecid > 0">
+				user_recid = #{userRecid},
+			</if>
+			<if test="userId != null and userId != ''">
+				user_id = #{userId},
+			</if>
+			<if test="equipRecid> 0">
+				equip_recid = #{equipRecid},
+			</if>
+			<if test="equipName != null and equipName != ''">
+				equip_name = #{equipName},
+			</if>
+			<if test="equipIp != null and equipIp != ''">
+				equip_ip = #{equipIp},
+			</if>
+			<if test="equipAccountName != null and equipAccountName != ''">
+				equip_account_name = #{equipAccountName},
+			</if>
+			<if test="remoteIp != null and remoteIp != ''">
+				remote_ip = #{remoteIp},
+			</if>
+			<if test="authData != null and authData != ''">
+				auth_data = #{authData},
+			</if>
+			<if test="resultCode != null and resultCode != ''">
+				result_code = #{resultCode},
+			</if>
+			<if test="resultMsg != null and resultMsg != ''">
+				result_msg = #{resultMsg},
+			</if>
+			success = #{success},
+			create_dt = LOCALTIMESTAMP
+		</trim>
+		WHERE recid=#{recid}
+	</update>
+	
+	<select id="getAuthLogListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(*)
+		FROM auth_log
+		<where>
+			<if test="extraParams != null">
+				<if test="extraParams.userList != null and extraParams.userList.size > 0">
+					<foreach collection="extraParams.userList" item="id"  open="AND user_recid IN (" separator="," close=")">
+						#{id}
+					</foreach>
+				</if>
+				<choose>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+						AND date(create_dt) BETWEEN date(#{extraParams.startDate}) AND date(#{extraParams.endDate})
+					</when>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+						AND date(create_dt) >= date(#{extraParams.startDate})
+					</when>
+					<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+						AND date(#{extraParams.endDate}) >= date(create_dt)
+					</when>
+				</choose>
+			</if>
+			<if test="entity.authMethod > 0">
+				AND auth_method = #{entity.authMethod}
+			</if>
+			<if test="entity.equipName != null and entity.equipName != '' ">
+				AND equip_name ILIKE '%' || #{entity.equipName} || '%'
+			</if>
+			<if test="entity.equipIp != null and entity.equipIp != '' ">
+				AND equip_ip ILIKE '%' || #{entity.equipIp} || '%'
+			</if>
+			<if test="entity.equipAccountName != null and entity.equipAccountName != '' ">
+				AND equip_account_name ILIKE '%' || #{entity.equipAccountName} || '%'
+			</if>
+			<if test="entity.userId != null and entity.userId != '' ">
+				AND user_id ILIKE '%' || #{entity.userId} || '%'
+			</if>
+			<if test="entity.userRecid > 0">
+				AND user_recid = #{entity.userRecid}
+			</if>
+			<if test="entity.success != null">
+				AND success = #{entity.success}
+			</if>
+			<if test="entity.reqType > 0">
+				AND req_type = #{entity.reqType} 
+			</if>
+		</where>
+	</select>
+	
+	<select id="getAuthLogList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="AuthLogMap">
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER (ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum,
+				recid,
+				auth_method,
+				req_type,
+				user_recid,
+				user_id,
+				equip_recid,
+				equip_name,
+				equip_ip,
+				equip_account_name,
+				remote_ip,
+				result_code,
+				auth_data,
+				result_msg,
+				create_dt,
+				success
+			FROM auth_log
+			<where>
+				<if test="extraParams != null">
+					<if test="extraParams.userList != null and extraParams.userList.size > 0">
+						<foreach collection="extraParams.userList" item="id"  open="AND user_recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+					<choose>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+							AND date(create_dt) BETWEEN date(#{extraParams.startDate}) AND date(#{extraParams.endDate})
+						</when>
+						<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+							AND date(create_dt) >= date(#{extraParams.startDate})
+						</when>
+						<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+							AND date(#{extraParams.endDate}) >= date(create_dt)
+						</when>
+					</choose>
+				</if>
+				<if test="entity.authMethod > 0">
+					AND auth_method = #{entity.authMethod}
+				</if>
+				<if test="entity.equipName != null and entity.equipName != '' ">
+					AND equip_name ILIKE '%' || #{entity.equipName} || '%'
+				</if>
+				<if test="entity.equipIp != null and entity.equipIp != '' ">
+					AND equip_ip ILIKE '%' || #{entity.equipIp} || '%'
+				</if>
+				<if test="entity.equipAccountName != null and entity.equipAccountName != '' ">
+					AND equip_account_name ILIKE '%' || #{entity.equipAccountName} || '%'
+				</if>
+				<if test="entity.userId != null and entity.userId != '' ">
+					AND user_id ILIKE '%' || #{entity.userId} || '%'
+				</if>
+				<if test="entity.userRecid > 0">
+					AND user_recid = #{entity.userRecid}
+				</if>
+				<if test="entity.success != null">
+					AND success = #{entity.success}
+				</if>
+				<if test="entity.reqType > 0">
+					AND req_type = #{entity.reqType} 
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getAuthLogInfo" parameterType="AuthLog" resultMap="AuthLogMap">
+		SELECT
+			recid,
+			auth_method,
+			req_type,
+			user_recid,
+			user_id,
+			equip_recid,
+			equip_name,
+			equip_ip,
+			equip_account_name,
+			remote_ip,
+			result_code,
+			auth_data,
+			result_msg,
+			create_dt,
+			success
+		FROM auth_log
+		WHERE recid = #{recid}
+	</select>
+	
+	<select id="getAuthDetailLogList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="AuthDetialLogMap">
+		SELECT
+			recid,
+			log_recid,
+			log_type,
+			message,
+			create_dt
+		FROM auth_detail_log 
+		WHERE log_recid = #{entity.logRecid}
+		<if test="sort != null">
+			ORDER BY ${sort.sortFieldNm} ${sort.sortDir}
+		</if>
+	</select>
+</mapper>

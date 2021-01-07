@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+<!-- 
+	<resultMap id="UserGroupMap" type="UserGroupInfo" >
+		<id column="recid" property="recid" />
+		<result column="group_name" property="groupName" />
+		<result column="group_path" property="groupPath" />
+		<result column="parent_group_recid" property="parentGroupRecid" />
+		<result column="create_dt" property="createDt" />
+		<result column="create_ip" property="createIp" />
+		<result column="create_user" property="createUser" />
+		<result column="update_dt" property="updateDt" />
+		<result column="update_ip" property="updateIp" />
+		<result column="update_user" property="updateUser" />
+	</resultMap>
+-->
+
+	<resultMap id="UserGroupRelationMap" type="UserGroupRelation">
+		<id column="recid" property="recid"/>
+		<result column="user_recid" property="userRecid"/>
+		<result column="group_recid" property="groupRecid"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+
+	<!-- 사용자 그룹 정보 -->
+	<sql id="selectUserGroupInfo">
+		SELECT UG.recid,
+			UG.group_name,
+			UG.group_path,
+			UG.parent_group_recid,
+			UG.create_dt,
+			UG.create_ip,
+			UG.create_user,
+			UG.update_dt,
+			UG.update_ip,
+			UG.update_user 
+		FROM user_group_info UG
+	</sql>
+	
+	<!-- 모든 사용자 그룹 정보 조회 -->
+	<select id="selectUserGroupListAll"  resultMap="UserGroupInfoMap">
+		SELECT * FROM user_group_info
+	</select>
+	
+	<!--
+		사용자 그룹정보 By RECID
+		
+		Author:	LeeJungYoung 
+		Date:	2015-06-08
+	-->
+	<select id="getUserGroupInfoByRecid" parameterType="int" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo"/>
+		WHERE UG.recid = #{recid}
+	</select>
+	
+	<!--
+		사용자 그룹 정보 By 그룹 Path
+		Author:	LeeJungYoung 
+		Date:	2015-06-11
+	-->
+	<select id="getUserGroupInfoByGroupPath" parameterType="string" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo"/>
+		WHERE UG.group_path = #{groupPath}
+	</select>
+	
+	<select id="getUserGroupInfoByUserRecid" parameterType="int" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo" />
+			INNER JOIN user_group_relation	UGR ON UGR.group_recid = UG.recid
+			INNER JOIN user_info			UI ON UI.recid = UGR.user_recid
+		WHERE UI.recid = #{recid}
+	</select>
+	
+	<select id="getUserGroupInfoByUserId" parameterType="string" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo" />
+			INNER JOIN user_group_relation	UGR ON UGR.group_recid = UG.recid
+			INNER JOIN user_info			UI ON UI.recid = UGR.user_recid
+		WHERE UI.user_id = #{userId}
+	</select>
+	
+	<!--
+		사용자 그룹 정보 By 부모 그룹 ID
+		
+		author : LeeJungYoung 
+		Date : 2015-06-08
+	-->
+	<select id="selectChildUserGroupList" parameterType="int" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo"/>
+		WHERE UG.parent_group_recid = #{recid}
+	</select>
+	
+	<select id="selectSiblingUserGroupList" parameterType="int" resultMap="UserGroupInfoMap">
+		<include refid="selectUserGroupInfo"/>
+		INNER JOIN (SELECT parent_group_recid FROM user_group_info WHERE recid = #{recid}) B
+			ON UG.parent_group_recid = B.parent_group_recid
+	</select>
+	
+	<select id="selectAllChildUserGroupList" parameterType="int" resultMap="UserGroupInfoMap">
+		WITH RECURSIVE result_sub_group AS
+		(
+			SELECT recid
+			FROM user_group_info
+			WHERE recid = #{recid}
+			
+			UNION ALL
+			
+			SELECT A.recid
+			FROM user_group_info A
+				INNER JOIN result_sub_group B
+					ON A.parent_group_recid = B.recid
+		)
+		<include refid="selectUserGroupInfo" />
+			INNER JOIN result_sub_group B ON UG.recid = B.recid
+	</select>
+	
+	<!-- 2016.10.17 swcho ... repair sql query syntax error -->
+	<select id="selectAllParentUserGroupList" parameterType="int" resultMap="UserGroupInfoMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, parent_group_recid
+			FROM user_group_info
+			WHERE recid = #{recid}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.parent_group_recid
+			FROM user_group_info A
+				INNER JOIN result_sub_group B
+					ON A.recid = B.parent_group_recid
+		)
+		<include refid="selectUserGroupInfo" />
+			INNER JOIN result_sub_group B ON UG.recid = B.recid
+	</select>
+	
+	<!-- 모든 사용자 그룹 트리 -->
+	<!-- 삭제 -->
+	<select id="selectAllChildUserGroupListByRecid" parameterType="map" resultMap="UserGroupInfoMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT
+				recid,
+				group_name,
+				group_path,
+				parent_group_recid
+			FROM user_group_info WHERE 1=1
+			<if test="groupRecid != null and groupRecid > -1 ">
+				AND parent_group_recid = #{groupRecid}
+			</if>
+			UNION ALL
+			SELECT 
+				A.recid, 
+				A.group_name, 
+				A.group_path, 
+				A.parent_group_recid 
+			FROM user_group_info A
+				JOIN result_sub_group B ON A.parent_group_recid = B.recid
+		)
+		SELECT * FROM (
+			SELECT
+				A.recid, 
+				A.group_name, 
+				A.group_path, 
+				A.parent_group_recid 
+			FROM result_sub_group A
+			<if test="groupRecid != null and groupRecid > -1 ">
+			UNION ALL
+			SELECT
+				B.recid, 
+				B.group_name, 
+				B.group_path, 
+				B.parent_group_recid 
+			FROM user_group_info B 
+			WHERE B.recid = #{groupRecid}
+			</if>
+		) N
+		ORDER BY N.recid ASC
+	</select>
+	
+	<!-- 삭제 -->
+	<select id="selectAllChildUserGroupListByRecidNUserLevel" parameterType="map" resultMap="UserGroupInfoMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT
+				recid,
+				group_name,
+				group_path,
+				parent_group_recid
+			FROM user_group_info WHERE 1=1
+			<if test="groupRecid != null and groupRecid > -1 ">
+				AND parent_group_recid = #{groupRecid}
+			</if>
+			UNION ALL
+			SELECT 
+				A.recid, 
+				A.group_name, 
+				A.group_path, 
+				A.parent_group_recid 
+			FROM user_group_info A
+				JOIN result_sub_group B ON A.parent_group_recid = B.recid
+		)
+		SELECT * FROM (
+			SELECT
+				A.recid, 
+				A.group_name, 
+				A.group_path, 
+				A.parent_group_recid 
+			FROM result_sub_group A
+			<if test="userLevelCd != null and userLevelCd > -1 ">
+				INNER JOIN user_group_relation UGR ON A.recid = UGR.group_recid
+				INNER JOIN user_info UI ON UGR.user_recid = UI.recid AND UI.user_level_cd = #{userLevelCd}
+			</if>
+			<if test="groupRecid != null and groupRecid > -1 ">
+			UNION ALL
+			SELECT
+				B.recid, 
+				B.group_name, 
+				B.group_path, 
+				B.parent_group_recid 
+			FROM user_group_info B
+			<if test="userLevelCd != null and userLevelCd > -1 ">
+				INNER JOIN user_group_relation UGR ON B.recid = UGR.group_recid
+				INNER JOIN user_info UI ON UGR.user_recid = UI.recid AND UI.user_level_cd = #{userLevelCd}
+			</if> 
+			WHERE B.recid = #{groupRecid}
+			</if>
+		) N
+		ORDER BY N.recid ASC
+	</select>
+	
+	<!--
+		사용자그룹 정보 추가
+		
+		Author:	LeeJungYoung 
+		Date:	2015-06-08
+	-->
+	<insert id="insertUserGroupInfo" parameterType="UserGroupInfo">
+		INSERT into user_group_info (
+			group_name,
+			group_path,
+			parent_group_recid,
+			create_ip,
+			create_user
+		)
+		VALUES (
+			#{groupName},
+			#{groupPath},
+			#{parentGroupRecid},
+			#{createIp},
+			#{createUser}
+		)
+	</insert>
+	
+	<!--
+		사용자 그룹 정보 수정 By RECID
+		
+		Author:	LeeJungYoung 
+		Date:	2015-06-08
+	-->
+	<update id="updateUserGroupInfoByRecid" parameterType="UserGroupInfo">
+		UPDATE user_group_info SET 
+			group_name=#{groupName},
+			group_path=#{groupPath},
+			update_dt=LOCALTIMESTAMP,
+			update_ip=#{updateIp},
+			update_user=#{updateUser} 
+		WHERE recid=#{recid}
+	</update>
+	
+	<update id="updateUserGroupInfoByRecidForMoveGroup" parameterType="UserGroupInfo">
+		UPDATE user_group_info SET 
+			group_name=#{groupName},
+			group_path=#{groupPath},
+			update_dt=LOCALTIMESTAMP,
+			parent_group_recid = #{parentGroupRecid},
+			update_ip=#{updateIp},
+			update_user=#{updateUser} 
+		WHERE recid=#{recid}
+	</update>
+	
+	<!-- 사용자 그룹 정보 수정 By 그룹 경로 -->
+	<update id="updateUserGroupInfoByGroupPath" parameterType="map">
+		WITH RECURSIVE subgroups AS (
+			SELECT recid, group_path
+			FROM user_group_info
+			WHERE recid=#{recid}
+			UNION ALL
+			SELECT A.recid, A.group_path
+			FROM user_group_info A
+				INNER JOIN subgroups B ON A.parent_group_recid = B.recid
+		)
+		UPDATE user_group_info SET
+			group_path= #{newGroupPath} || substring(group_path, length(#{oldGroupPath})+1 )
+		WHERE recid IN (
+			SELECT recid FROM subgroups
+		)
+	</update>
+	
+	<!--
+		사용자 그룹 정보 삭제 By RECID
+		
+		Author:	LeeJungYoung 
+		Date:	2015-06-08
+	-->
+	<delete id="deleteUserGroupInfoByRecid" parameterType="int">
+		DELETE FROM user_group_info WHERE recid=#{recid}
+	</delete>
+	
+	
+	<!-- UserGroupRelation -->
+	<!-- 
+		사용자가 어떤 그룹에 속해 있는지 조회SQL
+		
+		author : LeeJungYoung 
+		Date : 2015-06-08
+	-->
+	<sql id="selectUserGroupRelation">
+		SELECT * FROM user_group_relation
+	</sql>
+	
+	<!-- 
+		사용자가 어떤 그룹에 속해 있는지 조회(사용자 그룹ID)
+		
+		author : LeeJungYoung 
+		Date : 2015-06-08
+	-->
+	<select id="selectUserGroupRelationByGroupRecid" parameterType="int" resultMap="UserGroupRelationMap">
+		<include refid="selectUserGroupRelation" /> 
+		WHERE group_recid = #{userGrpId}
+	</select>
+	
+	<!-- 사용자 그룹에 있는 사용자 ID 리스트 조회 -->
+	<select id="selectUserIdListByGroupRecid" parameterType="int" resultType="string">
+		WITH result_sub_group AS (
+			SELECT recid FROM user_group_info
+			WHERE recid = #{grpId}
+			
+			UNION ALL
+			
+			SELECT A.recid 
+			FROM user_group_info A
+				INNER JOIN result_sub_group B
+					ON A.parent_group_recid = B.recid
+		)
+		SELECT UI.user_id from user_info UI
+			INNER JOIN user_group_relation UGR ON UGR.user_recid = UI.recid
+			INNER JOIN result_sub_group B ON UGR.group_recid = B.recid
+	</select>
+	
+	<!-- 장비그룹 관계 추가 -->
+	<insert id="inserUserGroupRelation" parameterType="UserGroupRelation">
+		INSERT INTO user_group_relation(
+			user_recid, group_recid,
+			update_dt, update_ip, update_user
+		)
+		VALUES (
+			#{userRecid}, #{groupRecid},
+			LOCALTIMESTAMP, #{updateIp}, #{updateUser}
+		)
+	</insert>
+	
+	<!-- 장비그룹 관계 수정-->
+	<update id="updateUserGroupRelation" parameterType="UserGroupRelation">
+		UPDATE user_group_relation SET
+			group_recid = #{groupRecid},
+			update_dt = LOCALTIMESTAMP,
+			update_ip =#{updateIp},
+			update_user = #{updateUser}
+		WHERE user_recid = #{userRecid}
+	</update>
+	
+	<!--
+		사용자 그룹 관계 삭제(다중)
+		Author:	LeeJungYoung
+		Date:	2015.6.8.
+	-->
+	<delete id="deleteUserGroupRelationByRecids" parameterType="list">
+		DELETE FROM user_group_relation
+		WHERE user_recid IN
+		<foreach collection="list" item="id"  open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+	
+	<!--
+		사용자 그룹 관계 모두 삭제
+		2016.3.2 swcho 쿼리오류 수정
+		2016.3.22 swcho castle 계정 제외 조건문 추가
+	-->
+	<delete id="deleteAllUserGroupRelationByUserLevel" parameterType="int">
+		DELETE FROM user_group_relation UGR
+		USING user_info UI 
+		WHERE UI.recid = UGR.user_recid
+			AND UI.user_level_cd = #{userLevelCd}
+			AND UI.recid <![CDATA[ <> 1 ]]> 
+	</delete>
+</mapper>

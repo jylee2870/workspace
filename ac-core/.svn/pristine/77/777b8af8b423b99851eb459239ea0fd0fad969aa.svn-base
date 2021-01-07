@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<select id="policySearchByUserObject" parameterType="PolicyParamUser" resultMap="policyMap">
+		WITH RECURSIVE 
+		user_group ( type, recid, group_recid, lv ) AS (
+			SELECT 2 				AS	type
+			     , UI.recid
+			     , UR.group_recid
+			     , 0 				AS	lv
+			  FROM user_info 			UI
+	    INNER JOIN user_group_relation	UR	ON	UI.recid = UR.user_recid
+			 WHERE UI.recid	= #{userRecid}     
+		),
+		user_sup_group AS ( 
+			SELECT recid
+				 , group_name
+				 , group_path
+				 , parent_group_recid
+				 , 1				AS	lv
+			  FROM user_group_info	  
+			 WHERE recid = COALESCE( ( SELECT group_recid FROM user_group ), #{userGroupRecid} )
+			
+			 UNION
+			 
+		    SELECT A.recid
+		    	 , A.group_name
+		    	 , A.group_path
+		    	 , A.parent_group_recid
+		    	 , lv+1				AS	lv
+			  FROM user_group_info 		A
+		INNER JOIN user_sup_group		B	ON	B.parent_group_recid = A.recid
+		),
+		users AS (
+			SELECT type
+				 , recid
+				 , lv
+			  FROM user_group
+			  
+			 UNION
+			
+			SELECT 1				AS	type
+				 , recid
+				 , lv
+			  FROM user_sup_group   
+		),
+		policies AS (
+			SELECT PL.recid
+				 , PL.policy_id
+				 , PO.type
+				 , PO.referenced_recid
+			  FROM policy_object		PO
+		INNER JOIN policy_list 			PL	ON	PO.policy_recid = PL.recid
+			 WHERE PL.policy_id = #{policyId}   
+		)
+		SELECT PS.recid
+			 , PS.policy_id
+			 , US.lv				  
+		  FROM policies					PS
+	INNER JOIN users					US	ON	PS.type = US.type AND PS.referenced_recid = US.recid
+		
+	</select>
+	
+	<select id="policySearchByEquipObject" parameterType="PolicyParamEquip" resultMap="policyMap">
+		WITH RECURSIVE 
+		equip_acc ( type, recid, equip_recid, lv ) AS (
+			SELECT 5				AS	type
+				 , recid
+				 , equip_recid
+				 , -1				AS	lv
+ 			  FROM equip_account
+			 WHERE recid = #{equipAccountRecid}
+		),
+		equip_group ( type, recid, group_recid, lv ) AS (
+			SELECT 4 				AS	type
+			     , EI.recid
+			     , ER.group_recid
+			     , 0 				AS	lv
+			  FROM equip_info 			EI
+	    INNER JOIN equip_group_relation	ER	ON	EI.recid = ER.equip_recid
+			 WHERE EI.recid	= COALESCE( ( SELECT equip_recid FROM equip_acc ), #{equipRecid} )
+		),
+		equip_sup_group AS ( 
+			SELECT recid
+				 , group_name
+				 , group_path
+				 , parent_group_recid
+				 , 1				AS	lv
+			  FROM equip_group_info	  
+			 WHERE recid = COALESCE( ( SELECT group_recid FROM equip_group ), #{equipGroupRecid} )
+			
+			 UNION
+			 
+		    SELECT A.recid
+		    	 , A.group_name
+		    	 , A.group_path
+		    	 , A.parent_group_recid
+		    	 , lv+1				AS	lv
+			  FROM equip_group_info 		A
+		INNER JOIN equip_sup_group		B	ON	B.parent_group_recid = A.recid
+		),
+		equips AS (
+			SELECT type
+				 , recid
+				 , lv
+			  FROM equip_acc 
+					 
+			 UNION 
+		
+			SELECT type
+				 , recid
+				 , lv
+			  FROM equip_group
+			  
+			 UNION
+			
+			SELECT 3				AS	type
+				 , recid
+				 , lv
+			  FROM equip_sup_group   
+		),
+		policies AS (
+			SELECT PL.recid
+				 , PL.policy_id
+				 , PO.type
+				 , PO.referenced_recid
+			  FROM policy_object		PO
+		INNER JOIN policy_list 			PL	ON	PO.policy_recid = PL.recid
+			 WHERE PL.policy_id = #{policyId}   
+		)
+		SELECT PS.recid
+			 , PS.policy_id
+			 , ES.lv				  
+		  FROM policies					PS
+	INNER JOIN equips					ES	ON	PS.type = ES.type AND PS.referenced_recid = ES.recid
+	</select>
+		
+	<select id="policySearchByUserObjectAndEquipTarget" parameterType="map" resultMap="policyMap">
+		WITH RECURSIVE 
+		user_group ( type, recid, group_recid, lv ) AS (
+			SELECT 2 				AS	type
+			     , UI.recid
+			     , UR.group_recid
+			     , 0 				AS	lv
+			  FROM user_info 			UI
+	    INNER JOIN user_group_relation	UR	ON	UI.recid = UR.user_recid
+			 WHERE UI.recid	= #{object.userRecid}     
+		),
+		user_sup_group AS ( 
+			SELECT recid
+				 , group_name
+				 , group_path
+				 , parent_group_recid
+				 , 1				AS	lv
+			  FROM user_group_info	  
+			 WHERE recid = COALESCE( ( SELECT group_recid FROM user_group ), #{object.userGroupRecid} )
+			
+			 UNION
+			 
+		    SELECT A.recid
+		    	 , A.group_name
+		    	 , A.group_path
+		    	 , A.parent_group_recid
+		    	 , lv+1				AS	lv
+			  FROM user_group_info 		A
+		INNER JOIN user_sup_group		B	ON	B.parent_group_recid = A.recid
+		),
+		users AS (
+			SELECT type
+				 , recid
+				 , lv
+			  FROM user_group
+			  
+			 UNION
+			
+			SELECT 1				AS	type
+				 , recid
+				 , lv
+			  FROM user_sup_group   
+		),
+		equip_acc ( type, recid, equip_recid, lv ) AS (
+			SELECT 5				AS	type
+				 , recid
+				 , equip_recid
+				 , -1				AS	lv
+ 			  FROM equip_account
+			 WHERE recid = #{target.equipAccountRecid}
+		),
+		equip_group ( type, recid, group_recid, lv ) AS (
+			SELECT 4 				AS	type
+			     , EI.recid
+			     , ER.group_recid
+			     , 0 				AS	lv
+			  FROM equip_info 			EI
+	    INNER JOIN equip_group_relation	ER	ON	EI.recid = ER.equip_recid
+			 WHERE EI.recid	= COALESCE( ( SELECT equip_recid FROM equip_acc ), #{target.equipRecid} )
+		),
+		equip_sup_group AS ( 
+			SELECT recid
+				 , group_name
+				 , group_path
+				 , parent_group_recid
+				 , 1				AS	lv
+			  FROM equip_group_info	  
+			 WHERE recid = COALESCE( ( SELECT group_recid FROM equip_group ), #{target.equipGroupRecid} )
+			
+			 UNION
+			 
+		    SELECT A.recid
+		    	 , A.group_name
+		    	 , A.group_path
+		    	 , A.parent_group_recid
+		    	 , lv+1				AS	lv
+			  FROM equip_group_info 		A
+		INNER JOIN equip_sup_group		B	ON	B.parent_group_recid = A.recid
+		),
+		equips AS (
+			SELECT type
+				 , recid
+				 , lv
+			  FROM equip_acc 
+					 
+			 UNION 
+		
+			SELECT type
+				 , recid
+				 , lv
+			  FROM equip_group
+			  
+			 UNION
+			
+			SELECT 3				AS	type
+				 , recid
+				 , lv
+			  FROM equip_sup_group   
+		),
+		policies AS (
+			SELECT PL.recid
+				 , PL.policy_id
+				 , PO.type				AS	ob_type
+				 , PO.referenced_recid	AS	ob_ref
+				 , PT.type				AS	ta_type
+				 , PT.referenced_recid	AS	ta_ref
+			  FROM policy_object		PO
+		INNER JOIN policy_list 			PL	ON	PO.policy_recid = PL.recid
+		INNER JOIN policy_target		PT	ON	PO.recid = PT.object_recid
+			 WHERE PL.policy_id = #{object.policyId}   
+		),
+		object_target AS (
+			SELECT OB.type				AS	ob_type
+				 , OB.recid				AS	ob_ref
+				 , OB.lv				
+				 , TA.type				AS	ta_type
+				 , TA.recid				AS	ta_ref
+			<!-- , TA.lv			AS	target_lv -->
+			  FROM users 				OB
+		CROSS JOIN equips				TA
+		)
+		SELECT PS.recid
+			 , PS.policy_id
+			 , OT.lv				  
+		  FROM policies					PS
+	INNER JOIN object_target			OT	ON	PS.ob_type = OT.ob_type AND PS.ob_ref = OT.ob_ref AND PS.ta_type = OT.ta_type AND PS.ta_ref = OT.ta_ref
+	</select>
+</mapper>

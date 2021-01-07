@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipInfoResult" type="EquipInfo">
+		<id column="recid" property="recid"/>
+		<result column="equip_name" property="equipName"/>
+		<result column="ip_primary" property="ipPrimary"/>
+		<result column="ip_secondary" property="ipSecondary"/>
+		<result column="alias_enable" property="aliasEnable"/>
+		<result column="alias" property="alias"/>
+		<result column="equip_type" property="equipType"/>
+		<result column="vendor_name" property="vendorName"/>
+		<result column="model_no" property="modelNo"/>
+		<result column="os_recid" property="osRecid"/>
+		<result column="description" property="description"/>
+		<result column="create_dt" property="createDt"/>
+		<result column="create_ip" property="createIp"/>
+		<result column="create_user" property="createUser"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<resultMap id="EquipInfoExResult" type="Equipinfo" extends="EquipInfoResult">
+		<association property="groupInfo" resultMap="EquipGroupInfoResult" columnPrefix="eg_" />
+		<association property="osInfo" resultMap="EquipOSResult" columnPrefix="eo_" />
+		<association property="service" resultMap="EquipServiceInfoResult" columnPrefix="es_" />
+	</resultMap>
+	
+	<!-- 장비 정보 조회 -->
+	<sql id="selectEquipInfo">
+		SELECT recid,
+			, equip_name
+			, ip_primary
+			, ip_secondary
+			, alias_enable
+			, alias
+			, equip_type
+			, vendor_name
+			, model_no
+			, os_recid
+			, description
+			, create_dt
+			, create_ip
+			, create_user
+			, update_dt
+			, update_ip
+			, update_user
+		  FROM equip_info
+	</sql>
+	
+	<sql id="selectEquipInfoEx">
+		SELECT EI.*
+			, EG.recid AS eg_recid
+			, EG.group_name AS eg_group_name
+			, EG.group_path AS eg_group_path
+			, EG.parent_group_recid AS eg_parent_group_recid
+			, EG.create_dt AS eg_create_dt
+			, EG.create_ip AS eg_create_ip
+			, EG.create_user AS eg_create_user
+			, EG.update_dt AS eg_update_dt
+			, EG.update_ip AS eg_update_ip
+			, EG.update_user AS eg_update_user
+			
+			, EO.recid AS eo_recid
+			, EO.os_name AS eo_os_name
+			, EO.architecture AS eo_architecture 
+			, EO.version AS eo_version
+			, EO.create_dt AS eo_create_dt
+			, EO.create_ip AS eo_create_ip
+			, EO.create_user AS eo_create_user
+			, EO.update_dt AS eo_update_dt
+			, EO.update_ip AS eo_update_ip
+			, EO.update_user AS eo_update_user
+			, EO.os_type AS eo_os_type
+			
+			, ES.recid AS es_recid
+			, ES.service_name AS es_service_name
+			, ES.create_dt AS es_create_dt
+			, ES.create_ip AS es_create_ip
+			, ES.create_user AS es_create_user
+			, ES.update_dt AS es_update_dt
+			, ES.update_ip AS es_update_ip
+			, ES.update_user AS es_update_user
+		FROM equip_info EI
+			LEFT JOIN equip_service_relation	ESR	ON EI.recid = ESR.equip_recid
+			INNER JOIN equip_service			ES	ON ESR.equip_service_recid = ES.recid
+			LEFT JOIN os_info					EO	ON EI.os_recid = EO.recid
+			LEFT JOIN equip_group_relation		EGR	ON EI.recid = EGR.equip_recid
+			INNER JOIN equip_group_info			EG	ON EGR.group_recid = EG.recid
+	</sql>
+	
+	<!-- 장비 정보 리스트 카운트 -->
+	<select id="getEquipInfoListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT COUNT(*) AS count
+		FROM equip_info EI
+			LEFT JOIN equip_service_relation	ESR ON EI.recid = ESR.equip_recid
+			INNER JOIN equip_service			ES  ON ESR.equip_service_recid = ES.recid
+			LEFT JOIN os_info					EO  ON EI.os_recid = EO.recid
+			LEFT JOIN equip_group_relation		EGR ON EI.recid = EGR.equip_recid
+			INNER JOIN equip_group_info			EG  ON EGR.group_recid = EG.recid
+		<where>
+			<if test="entity.equipName != null and entity.equipName != '' ">
+				AND EI.equip_name LIKE '%' + #{entity.equipName} + '%'
+			</if>
+			<if test="entity.ipPrimary != null and entity.ipPrimary != '' ">
+				AND EI.ip_primary LIKE '%' + #{entity.ipPrimary} + '%'
+			</if>
+			<if test="entity.vendorName != null and entity.vendorName != '' ">
+				AND EI.vendor_name LIKE '%' + #{entity.vendorName} + '%'
+			</if>
+			<if test="entity.modelNo != null and entity.modelNo != '' ">
+				AND EI.model_no LIKE '%' + #{entity.modelNo} + '%'
+			</if>
+			<if test="entity.equipType != null and entity.equipType != '' ">
+				AND EI.equip_type = #{entity.equipType}
+			</if>
+			<if test="entity.groupInfo != null">
+				<if test="entity.groupInfo.groupPath != null and entity.groupInfo.groupPath != '' ">
+					AND EG.group_path LIKE '%' + #{entity.groupInfo.groupPath} + '%'
+				</if>
+			</if>
+			<if test="extraParams != null">
+				<choose>
+				<when test="(extraParams.equipList != null and extraParams.equipList.size > 0) and (extraParams.equipGroupList != null and extraParams.equipGroupList.size > 0)">
+					<foreach collection="extraParams.equipList" item="id"  open="AND (EI.recid IN (" separator="," close=")">
+						#{id}
+					</foreach>
+					<foreach collection="extraParams.equipGroupList" item="id"  open="OR EGR.group_recid IN (" separator="," close="))">
+						#{id}
+					</foreach>
+				</when>
+				<otherwise>
+					<if test="extraParams.equipList != null and extraParams.equipList.size > 0">
+						<foreach collection="extraParams.equipList" item="id"  open="AND EI.recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+					<if test="extraParams.equipGroupList != null and extraParams.equipGroupList.size > 0">
+						<foreach collection="extraParams.equipGroupList" item="id"  open="AND EGR.group_recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+					</if>
+				</otherwise>
+				</choose>
+			</if>
+		</where>
+	</select>
+	
+	<!-- 장비 정보 리스트 페이징 -->
+	<select id="selectEquipInfoList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="EquipInfoExResult">
+		SELECT *
+		FROM (
+			SELECT ROW_NUMBER() OVER (ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum
+				, EI.*
+				
+				, EG.recid AS eg_recid
+				, EG.group_name AS eg_group_name
+				, EG.group_path AS eg_group_path
+				, EG.parent_group_recid AS eg_parent_group_recid
+				, EG.create_dt AS eg_create_dt
+				, EG.create_ip AS eg_create_ip
+				, EG.create_user AS eg_create_user
+				, EG.update_dt AS eg_update_dt
+				, EG.update_ip AS eg_update_ip
+				, EG.update_user AS eg_update_user
+				
+				, EO.recid AS eo_recid
+				, EO.os_name AS eo_os_name
+				, EO.architecture AS eo_architecture 
+				, EO.version AS eo_version
+				, EO.create_dt AS eo_create_dt
+				, EO.create_ip AS eo_create_ip
+				, EO.create_user AS eo_create_user
+				, EO.update_dt AS eo_update_dt
+				, EO.update_ip AS eo_update_ip
+				, EO.update_user AS eo_update_user
+				, EO.os_type AS eo_os_type
+				
+				, ES.recid AS es_recid
+				, ES.service_name AS es_service_name
+				, ES.create_dt AS es_create_dt
+				, ES.create_ip AS es_create_ip
+				, ES.create_user AS es_create_user
+				, ES.update_dt AS es_update_dt
+				, ES.update_ip AS es_update_ip
+				, ES.update_user AS es_update_user
+			FROM equip_info EI
+				LEFT JOIN equip_service_relation	ESR	ON EI.recid = ESR.equip_recid
+				INNER JOIN equip_service			ES	ON ESR.equip_service_recid = ES.recid
+				LEFT JOIN os_info					EO	ON EI.os_recid = EO.recid
+				LEFT JOIN equip_group_relation		EGR	ON EI.recid = EGR.equip_recid
+				INNER JOIN equip_group_info			EG	ON EGR.group_recid = EG.recid
+			<where>
+				<if test="entity.equipName != null and entity.equipName != '' ">
+					EI.equip_name LIKE '%' + #{entity.equipName} + '%'
+				</if>
+				<if test="entity.ipPrimary != null and entity.ipPrimary != '' ">
+					AND EI.ip_primary LIKE '%' + #{entity.ipPrimary} + '%'
+				</if>
+				<if test="entity.vendorName != null and entity.vendorName != '' ">
+					AND EI.vendor_name LIKE '%' + #{entity.vendorName} + '%'
+				</if>
+				<if test="entity.modelNo != null and entity.modelNo != '' ">
+					AND EI.model_no LIKE '%' + #{entity.modelNo} + '%'
+				</if>
+				<if test="entity.equipType != null and entity.equipType != '' ">
+					AND EI.equip_type = #{entity.equipType}
+				</if>
+				<if test="entity.groupInfo != null">
+					<if test="entity.groupInfo.groupPath != null and entity.groupInfo.groupPath != '' ">
+						AND EG.group_path LIKE '%' + #{entity.groupInfo.groupPath} + '%'
+					</if>
+				</if>
+				<if test="extraParams != null">
+					<choose>
+					<when test="(extraParams.equipList != null and extraParams.equipList.size > 0) and (extraParams.equipGroupList != null and extraParams.equipGroupList.size > 0)">
+						<foreach collection="extraParams.equipList" item="id"  open="AND (EI.recid IN (" separator="," close=")">
+							#{id}
+						</foreach>
+						<foreach collection="extraParams.equipGroupList" item="id"  open="OR EGR.group_recid IN (" separator="," close="))">
+							#{id}
+						</foreach>
+					</when>
+					<otherwise>
+						<if test="extraParams.equipList != null and extraParams.equipList.size > 0">
+							<foreach collection="extraParams.equipList" item="id"  open="AND EI.recid IN (" separator="," close=")">
+								#{id}
+							</foreach>
+						</if>
+						<if test="extraParams.equipGroupList != null and extraParams.equipGroupList.size > 0">
+							<foreach collection="extraParams.equipGroupList" item="id"  open="AND EGR.group_recid IN (" separator="," close=")">
+								#{id}
+							</foreach>
+						</if>
+					</otherwise>
+					</choose>
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipInfoByParam" parameterType="EquipInfo" resultMap="EquipInfoExResult">
+		<include refid="selectEquipInfoEx" />
+		<where>
+			<if test="recid > 0">
+				AND EI.recid = #{recid}
+			</if>
+			<if test="equipName != null and equipName != ''">
+				AND EI.equip_name = #{equipName}
+			</if>
+			<if test="ipPrimary != null and ipPrimary != ''">
+				AND EI.ip_primary = #{ipPrimary}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 장비 그룹 레코드ID 목록에 장비 목록 조회 -->
+	<select id="selectEquipListByGroupList" parameterType="list" resultMap="EquipInfoExResult">
+		<include refid="selectEquipInfoEx" />
+		<where>
+			<foreach collection="list" item="id"  open="AND EG.recid IN (" separator="," close=")">
+				#{id}
+			</foreach>
+		</where>
+	</select>
+	
+	<!-- 장비정보 추가 -->
+	<insert id="insertEquipInfo" parameterType="EquipInfo" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO equip_info (
+			equip_name, ip_primary, ip_secondary,
+			equip_type, alias_enable, alias, vendor_name, model_no, os_recid, description,
+			create_dt, create_ip, create_user
+		)
+		VALUES (
+			#{equipName}, #{ipPrimary}, #{ipSecondary},
+			#{equipType}, #{aliasEnable}, #{alias}, #{vendorName}, #{modelNo}, #{osRecid}, #{description},
+			getdate(), #{createIp}, #{createUser}
+		)
+	</insert>
+	
+	<!--
+		장비정보 수정 by recid
+		author : LeeJungYoung 
+		date : 2015-06-22
+	 -->
+	<update id="updateEquipInfoByRecid" parameterType="EquipInfo">
+		UPDATE equip_info
+		SET
+			equip_name = #{equipName},
+			alias = #{alias},
+			alias_enable = #{aliasEnable},
+			ip_primary = #{ipPrimary},
+			ip_secondary = #{ipSecondary},
+			equip_type = #{equipType},
+			vendor_name = #{vendorName},
+			model_no = #{modelNo},
+			os_recid = #{osRecid},
+			description = #{description},
+			update_dt = getdate(),
+			update_ip = #{updateIp},
+			update_user = #{updateUser}
+		WHERE
+			recid = #{recid}
+	</update>
+	
+	<!-- 장비 정보 삭제 -->
+	<delete id="deleteEquipInfoByRecid" parameterType="int">
+		DELETE FROM equip_info
+		WHERE recid = #{recid}
+	</delete>
+	
+	<!--
+		장비정보 삭제 by recid 리스트
+		2016.3.2 swcho 선택된 장비 없이 일괄삭제 가능하도록 분기문 추가
+	 -->
+	<delete id="deleteEquipInfoByRecidList" parameterType="list">
+		DELETE FROM equip_info
+		<where>
+			<if test="list != null and list.size > 0">
+				<foreach collection="list" item="id"  open="recid IN (" separator="," close=")">
+					#{id} 
+				</foreach>
+			</if>
+		</where>
+	</delete>
+</mapper>

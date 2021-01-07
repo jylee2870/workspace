@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="UserPassworPolicyMap" type="UserPasswordPolicy">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="enabled" property="enabled" />
+		<result column="expired_password_date" property="expiredPasswordDate" />
+		<result column="validate_number" property="validateNumber" />
+		<result column="validate_mixed_case" property="validateMixedCase" />
+		<result column="validate_special_char" property="validateSpecialChar" />
+		<result column="validate_length" property="validateLength" />
+		<result column="validate_min_length" property="validateMinLength" />
+		<result column="validate_max_length" property="validateMaxLength" />
+	</resultMap>
+	
+	<select id="selectPasswordPolicyInfo" parameterType="int" resultMap="UserPassworPolicyMap">
+		SELECT 
+			recid,
+			policy_recid,
+			enabled,
+			expired_password_date,
+			validate_number,
+			validate_mixed_case,
+			validate_special_char,
+			validate_length,
+			validate_min_length,
+			validate_max_length
+		FROM user_password_policy
+		WHERE policy_recid = #{policyRecid}
+	</select>
+	
+	<!-- 정책 설정 추가 [비밀번호 정책 ('PASSWORD_POLICY')] -->
+	<insert id="insertPolicyConfigForPolicyPassword" parameterType="hashmap">
+		INSERT INTO user_password_policy
+			(
+				policy_recid,
+				enabled,
+				expired_password_date,
+				validate_number,
+				validate_mixed_case,
+				validate_special_char,
+				validate_length,
+				validate_min_length,
+				validate_max_length
+			)
+		VALUES
+		(
+			CAST(#{policyRecid} AS INT),
+			1,
+			CAST(#{expiredPasswordDate} AS INT),
+			CAST(#{validateNumber} AS INT),
+			CAST(#{validateMixedCase} AS INT),
+			CAST(#{validateSpecialChar} AS INT),
+			CAST(#{validateLength} AS INT),
+			CAST(#{validateMinLength} AS INT),
+			CAST(#{validateMaxLength} AS INT)
+		)
+	</insert>
+	
+	<!-- 정책 설정 수정 [비밀번호 정책 ('PASSWORD_POLICY')] -->
+	<update id="updatePolicyConfigForPolicyPassword" parameterType="hashmap">
+		UPDATE user_password_policy SET
+			enabled = 1,
+			expired_password_date = CAST( #{expiredPasswordDate} AS INT),
+			validate_number = CAST( #{validateNumber} AS INT),
+			validate_mixed_case = CAST( #{validateMixedCase} AS INT),
+			validate_special_char = CAST( #{validateSpecialChar} AS INT),
+			validate_length = CAST( #{validateLength} AS INT),
+			validate_min_length = CAST( #{validateMinLength} AS INT),
+			validate_max_length = CAST( #{validateMaxLength} AS INT)
+		WHERE policy_recid = CAST(#{recid} AS INT)
+	</update>
+	
+	<delete id="deletePasswordPolicyInfo" parameterType="int">
+		DELETE FROM user_password_policy
+		WHERE policy_recid = #{policyRecid}
+	</delete>
+	
+</mapper>

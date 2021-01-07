@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="sql">
+	<resultMap type="LmManagementLog" id="lmManagementLogResult">
+		<id column="recid" property="recid"/>
+		<result column="src_ip" property="srcIp"/>
+		<result column="src_uid" property="srcRecId"/>
+		<result column="src_user_id" property="srcId"/>
+		<result column="src_user_nm" property="srcNm"/>
+		<result column="src_user_level" property="srcLevel"/>
+		<result column="obj_uid" property="objUserRecId"/>
+		<result column="obj_user_id" property="objUserId"/>
+		<result column="obj_user_nm" property="objUserNm"/>
+		<result column="obj_user_level" property="objUserLevel"/>
+		<result column="obj_eid" property="objEquipRecId"/>
+		<result column="obj_equip_nm" property="objEquipNm"/>
+		<result column="message" property="message"/>
+		<result column="category" property="category"/>
+		<result column="log_level" property="logLevel"/>
+		<result column="risk_level" property="riskLevel"/>
+		<result column="result_cd" property="returnCode"/>
+		<result column="create_dt" property="logSaveDt"/>
+		
+		
+		<result column="SRC_TEL" property="srcTel"/>
+		<result column="SRC_DEPART" property="srcDepart"/>
+		<result column="SRC_COMPANY" property="srcCompany"/>
+		
+		<result column="OBJ_EQUIP_ID" property="objEquipId"/>
+		<result column="OBJ_EQUIP_ALIAS" property="objEquipAlias"/>
+		
+		<result column="CMD" property="cmd"/>
+		<result column="ALARM_METHOD" property="alarmMethod"/>
+		
+	</resultMap>
+	
+	<!--
+		관리로그 익스포트 데이터
+		2014.12.17 LeeJungYoung 추가
+	-->
+	<select id="selectLmManagementLogDownload" parameterType="LmManagementLog" resultMap="lmManagementLogResult">
+		<if test="userGroupRecid != null and userGroupRecid > 0">
+		WITH result_sub_group_100003 AS
+		(
+			SELECT recid, group_name, group_path 
+			FROM user_group_info 
+			WHERE 1=1
+			AND recid = #{userGroupRecid}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.group_name, A.group_path
+			FROM user_group_info A JOIN result_sub_group_100003 B ON A.parent_group_recid = B.recid
+		)
+		</if>
+		
+		SELECT * 
+		FROM management_log N2
+		<where>
+			<if test="userGroupRecid != null and userGroupRecid > 0">
+				AND src_id IN (
+					SELECT UI.user_id 
+					FROM
+						user_info UI,
+						user_group_relation UGR
+					WHERE UI.recid = UGR.user_recid AND
+						UGR.group_recid IN (
+							SELECT recid FROM result_sub_group_100003
+						)
+				)
+			</if>
+			
+			<if test="srcId != null and srcId != '' ">
+				AND src_user_id LIKE '%' + #{srcId} + '%'
+			</if>
+			<if test="srcNm != null and srcNm != '' ">
+				AND src_user_nm LIKE '%' + #{srcNm} + '%'
+			</if>
+			<if test="message != null and message != '' ">
+				AND message LIKE '%' + #{message} + '%'
+			</if>
+			<if test="srcLevel != null and srcLevel >0 ">
+				AND src_user_level = #{srcLevel}
+			</if>
+			<if test="returnCode != null and returnCode >-1 ">
+				AND result_cd = #{returnCode}
+			</if>
+			<if test="startDt != null and startDt != '' ">
+				AND create_dt >= to_timestamp(#{startDt}, 'YYYY-MM-DD')
+			</if>
+			<if test="endDt != null and endDt != '' ">
+				AND to_timestamp(#{endDt} + ' 23:59:59', 'YYYY-MM-DD HH24:MI:SS') >= create_dt 
+			</if>
+		</where>
+	</select>
+	
+	<!-- 관리자 로그 익스포트 데이터 by 관리자 그룹 id -->
+	<!-- 2015.12.17 LeeJungYoung 추가 -->
+	<select id="selectLmManagementLogDownloadByManage" parameterType="LmManagementLog" resultMap="lmManagementLogResult">
+		WITH result_sub_group_100002 AS
+		(
+			SELECT recid, group_name, group_path 
+			FROM user_group_info
+			WHERE 1=1
+				AND parent_group_recid = #{mgrGrpId}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.group_name, A.group_path 
+			FROM user_group_info A
+				JOIN result_sub_group_100002 B ON
+					A.parent_group_recid = B.recid
+		)
+		
+		SELECT * 
+		FROM
+			management_log N2
+			INNER JOIN
+				(
+					SELECT UI.recid, UI.user_id, A.group_name, A.group_path, UGR.group_recid 
+					FROM user_info UI
+						INNER JOIN user_group_relation UGR ON UI.recid = UGR.user_recid
+						INNER JOIN result_sub_group_100002 A ON A.recid = UGR.group_recid
+					WHERE UGR.group_recid = #{mgrGrpId}
+					
+					UNION
+					
+					SELECT UI.recid, UI.user_id, UG.group_name, UG.group_path, UGR.group_recid
+					FROM user_info UI
+						INNER JOIN user_group_relation UGR ON UI.recid = UGR.user_recid
+						INNER JOIN user_group_info UG ON UG.recid = UGR.group_recid
+					WHERE UGR.group_recid = #{mgrGrpId}
+				) N ON N2.src_user_id = N.user_id
+		<where>
+			<if test="inUserGroupStrToken != null and inUserGroupStrToken !='' ">
+				AND N2.src_uid IN (${inUserGroupStrToken})
+			</if>
+			<if test="srcId != null and srcId != '' ">
+				AND src_user_id LIKE '%' + #{srcId} + '%'
+			</if>
+			<if test="srcNm != null and srcNm != '' ">
+				AND src_user_nm LIKE '%' + #{srcNm} + '%'
+			</if>
+			<if test="message != null and message != '' ">
+				AND message LIKE '%' + #{message} + '%'
+			</if>
+			<if test="srcLevel != null and srcLevel >0 ">
+				AND src_user_level = #{srcLevel}
+			</if>
+			<if test="returnCode != null and returnCode >-1 ">
+				AND result_cd = #{returnCode}
+			</if>
+			<if test="startDt != null and startDt != '' ">
+				AND create_dt >=  to_timestamp(#{startDt}, 'YYYY-MM-DD')
+			</if>
+			<if test="endDt != null and endDt != '' ">
+				AND to_timestamp(#{endDt} + ' 23:59:59', 'YYYY-MM-DD HH24:MI:SS') >= create_dt 
+			</if>
+		</where>
+	</select>
+	
+	<!-- 관리로그 추가 -->
+	<insert id="insertLmManagementLog" parameterType="LmManagementLog">
+		INSERT INTO management_log (  
+			src_ip 
+			, src_uid
+			, src_user_id
+			, src_user_nm
+			, src_user_level
+			, obj_uid
+			, obj_user_id
+			, obj_user_nm
+			, obj_user_level
+			, obj_eid
+			, obj_equip_nm
+			, message
+			, result_cd
+			, create_dt
+			, category
+			, log_level
+			, risk_level
+		) VALUES (
+			#{srcIp}
+			, #{srcRecId}
+			, #{srcId}
+			, #{srcNm}
+			, #{srcLevel}
+			, #{objUserRecId}
+			, #{objUserId}
+			, #{objUserNm}
+			, #{objUserLevel}
+			, #{objEquipRecId}
+			, #{objEquipNm}
+			, #{message}
+			, #{returnCode}
+			, getdate()
+			, #{category}
+			, #{logLevel}
+			, #{riskLevel}
+		)
+	</insert>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-12 -->
+	<!-- 연동설정 > 계정 연동 설정 > 마지막 동기화 로그 표시 -->	 
+	<select id="select_LmManagementLog_TOP_By_AccSync" resultMap="lmManagementLogResult">
+		SELECT * FROM management_log
+		WHERE category = 'account_sync' 
+ 		ORDER BY create_dt DESC
+ 		LIMIT 1 
+	</select>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-12 -->
+	<!-- 연동설정 > VASCO 연동 설정> 마지막 동기화 로그 표시 -->
+	<select id="selectLmManagementLogTopByOTPSync" resultMap="lmManagementLogResult">
+		SELECT * FROM management_log
+		WHERE category = 'otp_sync' 
+ 		ORDER BY create_dt DESC 
+	</select>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-16 -->
+	<!-- 관리자 로그 카운트 -->
+	<select id="selectLmManagementCount" parameterType="LmManagementLog" resultType="int">
+		<if test="userGroupRecid != null and userGroupRecid >0 ">
+			WITH result_sub_group_100004 AS
+			(
+			 SELECT recid, group_name, group_path 
+			 FROM user_group_info WHERE 1=1
+			 AND recid = #{userGroupRecid}
+			 
+			 UNION ALL
+			 
+			 SELECT A.recid, A.group_name, A.group_path FROM user_group_info A JOIN result_sub_group_100004 B ON
+			 A.parent_group_recid = B.recid
+			)
+		</if>
+			SELECT count(*) AS count FROM management_log
+			WHERE 1=1
+		<if test="userGroupRecid != null and userGroupRecid > 0">
+			AND SRC_ID IN (
+				SELECT UI.user_id FROM user_info UI,
+				user_group_relation UGR
+				WHERE UI.recid = UGR.user_recid
+				AND UGR.user_recid IN (SELECT recid FROM result_sub_group_100004)
+			 )
+		</if> 
+		<if test="srcId != null and srcId != '' ">
+			AND src_user_id LIKE '%' + #{srcId} + '%'
+		</if>
+		<if test="srcNm != null and srcNm != '' ">
+			AND src_user_nm LIKE '%' + #{srcNm} + '%'
+		</if>
+		<if test="message != null and message != '' ">
+			AND message LIKE '%' + #{message} + '%'
+		</if>
+		<if test="srcLevel != null and srcLevel >0 ">
+			AND src_user_level = #{srcLevel}
+		</if>
+		<if test="returnCode != null and returnCode >-1 ">
+			AND result_cd = #{returnCode}
+		</if>
+		<if test="startDt != null and startDt != '' ">
+			AND create_dt >=  CONVERT(datetime, #{startDt} +' 00:00:00')
+		</if>
+		<if test="endDt != null and endDt != '' ">
+			AND CONVERT(datetime, #{endDt}+' 23:59:59') >= create_dt
+		</if>
+	</select>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-16 -->
+	<!-- 관리 로그 리스트 -->
+	<select id="selectLmManagementLogList" parameterType="LmManagementLog" resultMap="lmManagementLogResult">
+		<if test="userGroupRecid != null and userGroupRecid >0 ">
+			WITH result_sub_group_100003 AS
+			(
+				SELECT recid, group_name, group_path
+				FROM user_group_info WHERE 1=1
+				AND recid = ${userGroupRecid}
+				
+				UNION ALL
+				
+				SELECT A.recid, A.group_name, A.group_path FROM user_group_info A JOIN result_sub_group_100003 B ON
+				A.parent_group_recid = B.recid
+			)
+		</if>
+		
+			SELECT * FROM
+			(
+				SELECT Row_Number() over (Order by ${sortFieldNm} ${sortDir}) AS rownum,
+				*
+			FROM management_log N2
+			WHERE 1=1
+
+		<if test="userGroupRecid != null and userGroupRecid >0 ">
+			AND SRC_ID IN (
+				SELECT UI.user_id FROM user_info UI,
+				user_group_relation UGR
+				WHERE UI.recid = UGR.user_recid
+				AND UGR.user_recid IN (SELECT recid FROM result_sub_group_100003)
+			 )
+		</if>
+		
+		<if test="srcId != null and srcId != '' ">
+			AND src_user_id LIKE '%' + #{srcId} + '%'
+		</if>
+		<if test="srcNm != null and srcNm != '' ">
+			AND src_user_nm LIKE '%' + #{srcNm} + '%'
+		</if>
+		<if test="message != null and message != '' ">
+			AND message LIKE '%' + #{message} + '%'
+		</if>
+		<if test="srcLevel != null and srcLevel >0 ">
+			AND src_user_level = ${srcLevel}
+		</if>
+		<if test="returnCode != null and returnCode >-1 ">
+			AND result_cd = #{returnCode}
+		</if>
+		<if test="startDt != null and startDt != '' ">
+			AND create_dt >=  CONVERT(datetime, #{startDt} +' 00:00:00')
+		</if>
+		<if test="endDt != null and endDt != '' ">
+			AND CONVERT(datetime, #{endDt}+' 23:59:59') >= create_dt
+		</if>
+		)N
+		WHERE 1=1
+		<if test="startPage != null and endPage != null ">
+			AND N.rownum BETWEEN ${startPage} AND ${endPage}
+		</if>
+		
+	</select>
+	
+	<!-- 관리로그 상세보기 데이터 -->
+	<select id="selectLmManagementlogByRecid" parameterType="int" resultMap="lmManagementLogResult">
+		SELECT * FROM management_log
+		WHERE recid=#{recid}
+	</select>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-24 -->
+	<!-- 관리자 로그 카운트 by 관리자 그룹 id -->
+	<select id="selectLmManagementLogCountByManage" parameterType="LmManagementLog" resultType="int">
+		WITH result_sub_group_100001 AS
+		(
+		 SELECT recid, group_name, group_path 
+		 FROM user_group_info 
+		 WHERE 1=1
+		 AND recid = ${mgrGrpId}
+		 
+		 UNION ALL
+		 
+		 SELECT 
+		 A.recid, A.group_name, A.group_path 
+		 FROM user_group_info A 
+		 JOIN result_sub_group_100001 B 
+		 ON A.parent_group_recid = B.recid
+		)
+		
+		SELECT count(*) AS count FROM 
+		(
+		SELECT 
+		UI.user_id, 
+		A.group_name, 
+		A.group_path, 
+		UGR.group_recid 
+		FROM result_sub_group_100001 A
+		,user_info UI
+		,user_group_relation UGR
+		WHERE A.recid = UGR.group_recid
+		AND UGR.group_recid = ${mgrGrpId}
+		<!-- 사용자 레벨을 제한을 둔다... 최고관리자 권한의 데이터는 나오지 않도록 --> 
+		<!-- Date : 2016-03-14 LeeJungYoung -->
+		AND UI.user_level_cd > 1 
+		AND UGR.user_recid = UI.recid
+		UNION
+			SELECT
+			UI.user_id, 
+			UG.group_name, 
+			UG.group_path, 
+			UGR.group_recid 
+			FROM
+			 user_group_relation UGR
+			,user_info UI
+			,user_group_info UG
+			WHERE 1=1
+			 AND UGR.group_recid = ${mgrGrpId} 
+			 AND UI.recid = UGR.user_recid
+			 <!-- 사용자 레벨을 제한을 둔다... 최고관리자 권한의 데이터는 나오지 않도록 -->
+			 <!-- Date : 2016-03-14 LeeJungYoung -->
+			 AND UI.user_level_cd > 1
+			 AND UG.recid = UGR.group_recid
+		) N , management_log N2
+		WHERE N.user_id = N2.src_user_id
+		<if test="inUserGroupStrToken != null and inUserGroupStrToken !='' ">
+			AND N2.src_uid IN (${inUserGroupStrToken})
+		</if>
+		<if test="srcId != null and srcId != '' ">
+			AND N2.src_user_id LIKE '%' + #{srcId} + '%'
+		</if>
+		<if test="srcNm != null and srcNm != '' ">
+			AND N2.src_user_nm LIKE '%' + #{srcNm} + '%'
+		</if>
+		<if test="message != null and message != '' ">
+			AND N2.message LIKE '%' + #{message} + '%'
+		</if>
+		<if test="srcLevel != null and srcLevel >0 ">
+			AND N2.src_user_level = #{srcLevel}
+		</if>
+		<if test="returnCode != null and returnCode >-1 ">
+			AND N2.result_cd = #{returnCode}
+		</if>		
+		<if test="startDt != null and startDt != '' ">
+			AND N2.create_dt >=  CONVERT(datetime, #{startDt} +' 00:00:00')
+		</if>
+		<if test="endDt != null and endDt != '' ">
+			AND CONVERT(datetime, #{endDt}+' 23:59:59') >= N2.create_dt
+		</if>
+		
+		
+	</select>
+	
+	<!-- author : LeeJungYoung 
+		 Date : 2015-06-24 -->
+	<!-- 관리자 로그 리스트 by 관리자 그룹 id -->
+	<select id="selectLmManagementLogListByManage" parameterType="LmManagementLog" resultMap="lmManagementLogResult">
+		WITH result_sub_group_100002 AS
+		(
+			SELECT recid, group_name, group_path
+			FROM user_group_info 
+			WHERE 1=1
+				AND parent_group_recid = #{mgrGrpId}
+			
+			UNION ALL
+			
+			SELECT A.recid, A.group_name, A.group_path
+			FROM user_group_info A
+				JOIN result_sub_group_100002 B ON A.parent_group_recid = B.recid
+			)
+		
+		SELECT * 
+		FROM (
+			SELECT Row_Number() over (Order by ${sortFieldNm} ${sortDir} ) AS rownum,* 
+			FROM (
+				SELECT UI.user_id , A.group_name, A.group_path, UGR.group_recid 
+				FROM result_sub_group_100002 A
+					, user_info UI
+					, user_group_relation UGR
+				WHERE A.recid = UGR.group_recid
+					AND UGR.group_recid = #{mgrGrpId}
+					AND UGR.user_recid = UI.recid
+					<!-- 사용자 레벨을 제한을 둔다... 최고관리자 권한의 데이터는 나오지 않도록 -->
+			 		<!-- Date : 2016-03-14 LeeJungYoung -->
+					AND UI.user_level_cd > 1
+				
+				UNION
+				
+				SELECT UI.user_id, UG.group_name, UG.group_path, UGR.group_recid 
+				FROM user_group_relation UGR
+					, user_info UI
+					, user_group_info UG
+				WHERE 1=1
+					AND UGR.group_recid = #{mgrGrpId} 
+					AND UI.recid = UGR.user_recid
+					<!-- 사용자 레벨을 제한을 둔다... 최고관리자 권한의 데이터는 나오지 않도록 -->
+			 		<!-- Date : 2016-03-14 LeeJungYoung -->
+			 		AND UI.user_level_cd > 1
+  					AND UG.recid = UGR.group_recid
+			) N , management_log N2
+			WHERE N.user_id = N2.src_user_id
+			
+			<if test="inUserGroupStrToken != null and inUserGroupStrToken !='' ">
+				AND N2.src_uid IN (${inUserGroupStrToken})
+			</if>
+			<if test="srcId != null and srcId != '' ">
+				AND N2.src_user_id LIKE '%' + #{srcId} + '%'
+			</if>
+			<if test="srcNm != null and srcNm != '' ">
+				AND N2.src_user_nm LIKE '%' + #{srcNm} + '%'
+			</if>
+			<if test="message != null and message != '' ">
+				AND N2.message LIKE '%' + #{message} + '%'
+			</if>
+			<if test="srcLevel != null and srcLevel >0 ">
+				AND N2.src_user_level = #{srcLevel}
+			</if>
+			<if test="returnCode != null and returnCode >-1 ">
+				AND N2.result_cd = #{returnCode}
+			</if>
+			<if test="startDt != null and startDt != '' ">
+				AND N2.create_dt >=  CONVERT(datetime, #{startDt} +' 00:00:00')
+			</if>
+			<if test="endDt != null and endDt != '' ">
+				AND CONVERT(datetime, #{endDt}+' 23:59:59') >= N2.create_dt
+			</if>
+		) N
+		WHERE 1=1
+	
+		<if test="startPage != null and endPage != null ">
+			AND N.rownum BETWEEN #{startPage} AND #{endPage}
+		</if>
+	</select>
+		
+</mapper>

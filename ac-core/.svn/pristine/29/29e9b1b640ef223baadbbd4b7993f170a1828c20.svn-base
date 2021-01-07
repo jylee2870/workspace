@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="UserWebLoginPolicyMap" type="UserWebLoginPolicy">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="login_method" property="loginMethod" />
+		<result column="max_failed_count" property="maxFailedCount" />
+	</resultMap>
+	
+	<select id="selectWebLoginPolicyInfo" parameterType="int" resultMap="UserWebLoginPolicyMap">
+		SELECT 
+			recid,
+			policy_recid,
+			max_failed_count,
+			login_method
+		FROM user_web_login_policy
+		WHERE policy_recid = #{policyRecid}
+	</select>
+	
+	<!-- 정책 설정 추가 [웹로그인 정책 ('WEB_LOGIN_POLICY')] -->
+	<insert id="insertPolicyConfigForPolicyWebLogin" parameterType="hashmap">
+		INSERT INTO user_web_login_policy
+			(
+				policy_recid,
+				max_failed_count,
+				login_method
+			)
+		VALUES
+		(
+			CAST(#{policyRecid} AS INT),
+			CAST(#{maxFailedCount} AS INT),
+			CAST(#{loginMethod} AS INT)
+		)
+	</insert>
+	
+	<!-- 정책 설정 수정 [웹로그인 정책 ('WEB_LOGIN_POLICY')] -->
+	<update id="updatePolicyConfigForPolicyWebLogin" parameterType="hashmap">
+		UPDATE user_web_login_policy SET
+			max_failed_count = CAST( #{maxFailedCount} AS INT),
+			login_method = CAST( #{loginMethod} AS INT)
+		WHERE policy_recid = CAST(#{recid} AS INT)
+	</update>
+	
+	<delete id="deleteWebLoginPolicyInfo" parameterType="int">
+		DELETE FROM user_web_login_policy
+		WHERE policy_recid = #{policyRecid}
+	</delete>
+	
+</mapper>

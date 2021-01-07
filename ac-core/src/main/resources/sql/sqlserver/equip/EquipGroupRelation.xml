@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipGroupRelationResult" type="EquipGroupRelation">
+		<id column="recid" property="recid"/>
+		<result column="equip_recid" property="equipRecid"/>
+		<result column="group_recid" property="groupRecid"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<!-- 장비-장비그룹 조회-->
+	<sql id="selectEquipGroupRelation">
+		SELECT recid,
+			equip_recid,
+			group_recid,
+			update_dt,
+			update_ip,
+			update_user
+		FROM equip_group_relation
+	</sql>
+	
+	<!-- 장비-장비그룹 조회 by 장비그룹 ID-->
+	<select id="selectEquipGroupRelationByGrpid" parameterType="int" resultMap="EquipGroupRelationResult">
+		<include refid="selectEquipGroupRelation"/>
+		 WHERE group_recid = #{groupRecid}
+	</select>
+	
+	<!-- 장비-장비그룹 추가-->
+	<insert id="insertEquipGroupRelation" parameterType="EquipGroupRelation">
+		INSERT INTO equip_group_relation
+			( equip_recid, group_recid )
+		VALUES
+			( #{equipRecid} , #{groupRecid} )
+	</insert>
+	
+	<!-- 장비-장비그룹 수정-->
+	<update id="updateEquipGroupRelationByEquipId" parameterType="EquipGroupRelation">
+		UPDATE equip_group_relation SET
+			group_recid = #{groupRecid},
+			update_dt = GETDATE(),
+			update_ip =#{updateIp},
+			update_user = #{updateUser} 
+		WHERE equip_recid = #{equipRecid}
+	</update>
+	
+	<!-- 장비-장비그룹 삭제-->
+	<delete id="deleteEquipGroupRelationByEquipId" parameterType="int">
+		DELETE FROM equip_group_relation
+		WHERE equip_recid = #{equipRecid}
+	</delete>
+	
+	<!-- 장비-장비그룹 관계 삭제 -->
+	<!-- 2016.3.2 swcho 선택된 장비 없이 일괄삭제 가능하도록 분기문 추가 -->
+	<delete id="deleteEquipRelationByEquipIds" parameterType="list">
+		DELETE FROM equip_group_relation
+		<where>
+			<if test="list != null and list.size > 0">
+				<foreach collection="list" item="id"  open="equip_recid IN (" separator="," close=")">
+					#{id} 
+				</foreach>
+			</if>
+		</where>
+	</delete>
+	
+	<!-- 삭제 필요 surfree. 장비 그룹 id 수정 -->
+	<update id="updateCmEquipGroupInfo301" parameterType="EquipGroupRelation">
+		UPDATE equip_group_relation SET
+			group_recid = 1
+		WHERE group_recid IN (${inGroup})
+	</update>
+	
+	<!-- 장비 그룹 관계에서 해당 그룹을 기본그룹으로 변경 -->
+	<update id="clearEquipGroupRelationByGroupIds" parameterType="list">
+		UPDATE equip_group_relation SET
+			group_recid = 1
+		<where>
+			<foreach collection="list" item="id"  open="group_recid IN (" separator="," close=")">
+				#{id} 
+			</foreach>
+		</where>
+	</update>
+	
+	<!-- 삭제 필요 surfree. 장비 그룹 삭제 by recid -->
+	<delete id="deleteCmEquipGroupInfo301" parameterType="EquipGroupRelation">
+		DELETE FROM equip_group_info
+		WHERE recid IN (${inGroup})
+	</delete>
+	
+</mapper>

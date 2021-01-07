@@ -1,0 +1,707 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="policyMap" type="Policy">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="category" property="category" />
+		<result column="policy_id" property="policyId" />
+		<result column="policy_name" property="policyName" />
+		<result column="priority" property="priority" />
+		<result column="create_dt" property="createDt" />
+		<result column="create_ip" property="createIp" />
+		<result column="create_user" property="createUser" />
+		<result column="update_dt" property="updateDt" />
+		<result column="update_ip" property="updateIp" />
+		<result column="update_user" property="updateUser" />
+		<result column="enable" property="enable" />
+		<result column="from_dt" property="fromDt" />
+		<result column="to_dt" property="toDt" />
+		<result column="memo" property="memo" />
+		<result column="default_flag" property="defaultFlag" />
+	</resultMap>
+	
+	<resultMap id="policyObjectMap" type="PolicyObject">
+		<id column="recid" property="recid" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="type" property="type" />
+		<result column="referenced_recid" property="referencedRecid" />
+		<result column="filter" property="filter" />
+		<result column="priority" property="priority" />
+	</resultMap>
+	
+	<resultMap id="policyTargetMap" type="PolicyTarget">
+		<id column="recid" property="recid" />
+		<result column="object_recid" property="objectRecid" />
+		<result column="type" property="type" />
+		<result column="referenced_recid" property="referencedRecid" />
+		<result column="filter" property="filter" />
+		<result column="priority" property="priority" />
+	</resultMap>
+	
+	<resultMap id="policyWithObjectMap" type="Policy" extends="policyMap">
+		<collection property="policyObject" ofType="PolicyObject">
+			<id column="policyobject_recid" property="recid" />
+			<result column="policy_recid" property="policyRecid" />
+			<result column="type" property="type" />
+			<result column="referenced_recid" property="referencedRecid" />
+			<result column="filter" property="filter" />
+			<result column="priority" property="priority" />
+		</collection>
+	</resultMap>
+	
+	<resultMap id="policyObjectWithPolicyMap" type="PolicyObject" extends="policyObjectMap">
+		<collection property="policies" resultMap="policyMap" columnPrefix="pol_"/>
+	</resultMap>
+	
+	<!-- Deprecated -->
+	<resultMap id="policyTargetWithPolicyMap" type="PolicyTarget" extends="policyTargetMap">
+		<collection property="policies" resultMap="policyMap" columnPrefix="pol_"/>
+	</resultMap>
+	
+	
+	<resultMap id="policyWithTargetMap" type="Policy" extends="policyMap">
+		<collection property="policyTarget" ofType="PolicyTarget">
+			<id column="target_recid" property="recid" />
+			<result column="policy_recid" property="policyRecid" />
+			<result column="type" property="type" />
+			<result column="referenced_recid" property="referencedRecid" />
+			<result column="filter" property="filter" />
+			<result column="priority" property="priority" />
+		</collection>
+	</resultMap>
+	
+	<resultMap id="ArsApprovalPolicyMap" type="ArsApprovalPolicy">
+		<id column="recid" property="recid" />
+		<result column="bypass" property="bypass" />
+		<result column="policy_recid" property="policyRecid" />
+		<result column="ars_uid1" property="arsUid1" />
+		<result column="ars_uid2" property="arsUid2" />
+		<result column="ars_uid3" property="arsUid3" />
+	</resultMap>
+	
+	<sql id="pl_columns">
+		pl.recid as pol_recid,
+		pl.category as pol_category,
+		pl.policy_id as pol_policy_id,
+		pl.policy_name as pol_policy_name,
+		pl.priority as pol_priority,
+		pl.create_dt as pol_create_dt,
+		pl.create_ip as pol_create_ip,
+		pl.create_user as pol_create_user,
+		pl.update_dt as pol_update_dt,
+		pl.update_ip as pol_update_ip,
+		pl.update_user as pol_update_user,
+		pl.enable as pol_enable,
+		pl.from_dt as pol_from_dt,
+		pl.to_dt as pol_to_dt,
+		pl.memo as pol_memo
+	</sql>
+	
+	<insert id="insertPolicyList" parameterType="hashmap" useGeneratedKeys="true" keyProperty="recid">
+		INSERT INTO policy_list 
+			( category, policy_id, policy_name, create_dt, create_ip, create_user, enable, memo )
+		VALUES
+			( 1, #{policyId}, #{policyName}, LOCALTIMESTAMP, #{createIp}, #{createUser}, 1, #{memo})
+	</insert>
+	
+	<update id="updatePolicyList" parameterType="hashmap"> 
+		UPDATE policy_list SET
+			category = 1, 
+			policy_name = #{policyName}, 
+			update_dt = LOCALTIMESTAMP,
+			update_ip = #{updateIp},
+			update_user = #{updateUser},
+			enable = 1,
+			memo = #{memo}
+		WHERE recid = CAST(#{recid} AS INT)
+	</update>
+	
+	<!-- 2016-03-15 사용자그룹에 속해있는 정책 가져오기 -->
+	<select id="getPolicyInUserGroup" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_list pl
+			INNER JOIN policy_object po ON pl.policy_id = #{policyId} AND po.type = 1 AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<!-- 2016-03-15 장비그룹에 속해있는 정책 가져오기 -->
+	<select id="getPolicyInEquipGroup" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_list pl
+			INNER JOIN policy_object po ON pl.policy_id = #{policyId} AND po.type = 3 AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<select id="getAppropriatePolicyByUser" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_list pl
+			INNER JOIN policy_object po ON pl.policy_id = #{policyId} AND po.type = 2 AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<select id="getAppropriatePolicyByEquipAccount" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_list pl
+			INNER JOIN policy_object po ON pl.policy_id = #{policyId} AND po.type = 5 AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<select id="getAppropriatePolicyByEquip" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_list pl
+			INNER JOIN policy_object po ON pl.policy_id = #{policyId} AND po.type = 4 AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<select id="getAppropriatePolicyByEquipGroup" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM equip_group_info
+				WHERE recid = #{recid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM equip_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_object po
+			INNER JOIN result_sub_group rsg ON pt.type = 3 AND rsg.recid = pt.referenced_recid
+			INNER JOIN policy_list pl ON pl.policy_id = #{policyId} AND pl.recid = po.policy_recid
+		ORDER BY rsg.parent_group_recid
+	</select>
+	
+	<select id="getAppropriatePolicyByGroup" parameterType="PolicyParam" resultMap="policyWithObjectMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM user_group_info
+				WHERE recid = #{recid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM user_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT pl.*,
+			po.recid as policyobject_recid,
+			po.policy_recid,
+			po.type,
+			po.referenced_recid,
+			po.filter,
+			po.priority
+		FROM policy_object po
+			INNER JOIN result_sub_group rsg ON po.type = 1 AND rsg.recid = po.referenced_recid
+			INNER JOIN policy_list pl ON pl.policy_id = #{policyId} AND pl.recid = po.policy_recid
+		ORDER BY length(rsg.group_path) DESC
+	</select>
+	
+	<!--
+		오브젝트 정보로 PolciyObject 조회
+		
+		2016.5.26 surfree user 조회에서 type을 추가하여 조회 대상 처리
+		getAppropriatePolicyObjectByUser에서 getAppropriatePolicyObjectByObject로 변경
+		매개변수 type 추가
+	-->
+	<select id="getAppropriatePolicyObjectByObject" parameterType="PolicyParam" resultMap="policyObjectWithPolicyMap">
+		SELECT po.*,
+			<include refid="pl_columns"/>
+		FROM policy_list pl
+			INNER JOIN policy_object po 
+			ON pl.policy_id = #{policyId} 
+			AND po.type = #{type}
+			AND pl.recid = po.policy_recid
+		WHERE po.referenced_recid = #{recid}
+	</select>
+	
+	<!-- 
+		시스템 관리자에게 지정된 정책을 찾는다.
+		환경 설정 CASTLE 카테고리와 정책 리스트(policy_list)과 조인해 얻는다 
+		2016.6.23 swcho
+	-->
+	<select id="getAppropriatePolicyBySystemAdministrator" parameterType="PolicyParam" resultMap="policyMap">
+		SELECT pl.* 
+		  FROM policy_list pl
+				INNER JOIN configuration co 
+						ON co.config_value = ( pl.recid :: VARCHAR ) 
+				   	   AND co.category = 'CASTLE'
+				   	  
+				   	  <if test="policyId != null and policyId != ''"> 
+				   	   AND pl.policy_id = #{policyId}
+				   	  </if> 
+	</select>
+	
+	<!-- 사용자그룹에게 정책이 주어졌으면 (objectType = 1)-->
+	<select id="getAppropriatePolicyObjectByUserGroup" parameterType="PolicyParam" resultMap="policyObjectWithPolicyMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM user_group_info
+				WHERE recid = #{recid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM user_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT po.*,
+			<include refid="pl_columns"/>
+		FROM policy_object po
+			INNER JOIN result_sub_group rsg ON po.type = 1 AND rsg.recid = po.referenced_recid
+			INNER JOIN policy_list pl ON pl.policy_id = #{policyId} AND pl.recid = po.policy_recid
+		ORDER BY length(rsg.group_path) DESC
+	</select>
+	
+	<select id="getDefaultPolicyByPolicyId" parameterType="PolicyParam" resultMap="policyMap">
+		SELECT * 
+		FROM policy_list
+		WHERE policy_id = #{policyId} 
+		AND default_flag = 1
+		ORDER BY create_dt
+	</select>
+	
+	
+	
+	<select id="getAppropriatePolicyObjectByEquip" parameterType="PolicyParam" resultMap="policyObjectWithPolicyMap">
+		SELECT pt.*,
+			<include refid="pl_columns"/>
+		FROM policy_list pl
+			INNER JOIN policy_object pt 
+			ON pl.policy_id = #{policyId} 
+			AND pt.type = 4 
+			AND pl.recid = pt.policy_recid
+		WHERE pt.referenced_recid = #{recid}
+	</select>
+	
+	<select id="getAppropriatePolicyObjectByEquipGroup" parameterType="PolicyParam" resultMap="policyObjectWithPolicyMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM equip_group_info
+				WHERE recid = #{recid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM equip_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT pt.*,
+			<include refid="pl_columns"/>
+		FROM policy_object pt
+			INNER JOIN result_sub_group rsg ON pt.type = 3 AND rsg.recid = pt.referenced_recid
+			INNER JOIN policy_list pl ON pl.policy_id = #{policyId} AND pl.recid = pt.policy_recid
+		ORDER BY length(rsg.group_path) DESC
+	</select>
+	
+	
+	<select id="getPolicyTargetByEquip" parameterType="map" resultMap="policyWithTargetMap">
+		SELECT *
+		FROM policy_target PT
+		WHERE PT.policy_recid = #{policyRecid} AND PT.type = #{type} AND PT.referenced_recid = #{recid}
+	</select>
+	
+	<!-- @Deprecated -->
+	<select id="getPolicyListTargetByEquip" parameterType="map" resultMap="policyTargetMap">
+		SELECT *
+		FROM policy_target PT
+		WHERE PT.type = #{type} AND PT.referenced_recid = #{recid}
+	</select>
+	
+	<!-- @Deprecated -->
+	<select id="getPolicyTargetByEquipGroup" parameterType="map" resultMap="policyWithTargetMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM equip_group_info
+				WHERE recid = #{equipGroupRecid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM equip_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT PT.*
+		FROM policy_target PT
+			INNER JOIN result_sub_group rsg ON PT.type = 3 AND PT.policy_recid = #{policyRecid} AND rsg.recid = PT.referenced_recid
+		ORDER BY length(rsg.group_path)
+	</select>
+	
+	<!-- @Deprecated -->
+	<select id="getPolicyListTargetByEquipGroup" parameterType="map" resultMap="policyTargetMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM equip_group_info
+				WHERE recid = #{equipGroupRecid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM equip_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT PT.*
+		FROM policy_target PT
+			INNER JOIN result_sub_group rsg ON PT.type = 3 AND rsg.recid = PT.referenced_recid
+		ORDER BY length(rsg.group_path)
+	</select>
+	
+	<select id="getArsApprovalUserPolicy" parameterType="int" resultMap="ArsApprovalPolicyMap">
+		SELECT recid, type, policy_recid, ars_uid1, ars_uid2, ars_uid3, validTime
+		FROM equip_account_ars_policy
+		WHERE policy_recid = #{policyRecid}
+	</select>
+	
+	<!-- 이정용 추가 policy_id별로 데이터 가져오기 TABLE : policy_list -->
+	<!-- DATE : 2015.09.30 -->
+	<select id="getPolicyListUsingPolicyId" parameterType="string" resultMap="policyMap">
+		SELECT 
+		*
+		FROM policy_list
+		WHERE policy_id = #{policyId}
+	</select>
+	
+	
+	<!-- 이정용 추가 정책 정보 보기 -->
+	<!-- DATE : 2015.09.30 -->
+	<select id="selectPolicyListInfo" parameterType="int" resultMap="policyMap">
+		SELECT 
+			recid,
+			category,
+			policy_id,
+			policy_name,
+			priority,
+			create_dt,
+			create_ip,
+			create_user,
+			update_dt,
+			update_ip,
+			update_user,
+			enable,
+			from_dt,
+			to_dt,
+			memo,
+			default_flag
+		FROM policy_list
+		WHERE recid = #{policyRecid}
+	</select>
+	
+	<!-- 이정용 추가 policy_object에 추가 -->
+	<!-- DATE : 2015.10.01 -->
+	<insert id="insertPolicyObject" parameterType="PolicyObject" useGeneratedKeys="true" keyProperty="recid">
+		INSERT INTO policy_object (
+			policy_recid,
+			type,
+			referenced_recid,
+			filter,
+			priority
+		)VALUES(
+			CAST(#{policyRecid} AS INT),
+			CAST(#{type} AS INT),
+			CAST(#{referencedRecid} AS INT),
+			0,
+			0
+		)
+	</insert>
+	
+	<!-- 이정용 추가 policy_object에 추가 -->
+	<!-- DATE : 2015.10.01 -->
+	<!-- Description : 사용 안함 -->
+	<!-- Description : policy_object의 recid를 참조 하기 때문에 공통으로 insert 못함 -->
+	<!-- <insert id="insertPolicyTarget" parameterType="PolicyParam">
+		INSERT INTO policy_target (
+			policy_recid,
+			type,
+			referenced_recid,
+			filter,
+			priority
+		)VALUES(
+			${policyRecid},
+			${type},
+			${referencedRecid},
+			0,
+			0
+		)
+	</insert> -->
+	
+	<!-- 이정용 추가 policy_object 삭제 -->
+	<!-- DATE : 2015.10.01 -->
+	<delete id="deletePolicyObject" parameterType="PolicyObject">
+		DELETE FROM policy_object
+		WHERE type = ${type}
+		AND referenced_recid = ${referencedRecid}
+		AND policy_recid = ${policyRecid}
+	</delete>
+	
+	<!-- 사용자그룹 & 사용자 장비그룹 & 장비 & 장비계정이 삭제되면 연관된 정책 모두를 지운다 -->
+	<!-- policy_target 지우기 -->
+	<delete id="deletePolicyObjectForRelativeTarget1" parameterType="hashmap">
+		WITH select_object(recid) AS (
+			SELECT recid FROM policy_object
+			<where>
+				type = #{type}
+				<if test="referencedRecid != null and referencedRecid !=''">
+					AND	referenced_recid = #{referencedRecid}
+				</if>
+			</where>
+		)
+		DELETE FROM policy_target
+		WHERE object_recid IN (SELECT recid FROM select_object)
+	</delete>
+	
+	<!-- 사용자그룹 & 사용자 장비그룹 & 장비 & 장비계정이 삭제되면 연관된 정책 모두를 지운다 -->
+	<!-- policy_object 지우기 -->
+	<delete id="deletePolicyObjectForRelativeTarget2" parameterType="hashmap">
+		WITH select_object(recid) AS (
+			SELECT recid FROM policy_object
+			<where>
+				type = #{type}
+				<if test="referencedRecid != null and referencedRecid !=''">
+					AND	referenced_recid = #{referencedRecid}
+				</if>
+			</where>
+		)
+		DELETE FROM policy_object
+		WHERE recid IN (SELECT recid FROM select_object)
+	</delete>
+	
+	<!-- 장비그룹, 장비, 장비계정을 삭제 할때 해당되는 대상의 정책(objectTarget)을 삭제 -->
+	<!-- 2016.3.2 swcho 선택 타입에 대해서 일괄 삭제가 가능하도록 분기 형태로 변경 -->
+	<delete id="deletePolicyTargetByTargetReferencedRecid" parameterType="hashmap">
+		DELETE FROM policy_target 
+		
+		<where>
+				type = #{type}
+		
+			<if test="referencedRecid != null and referencedRecid !=''">
+			AND	referenced_recid = #{referencedRecid}
+			</if>
+		</where>
+	</delete>
+	
+	<!-- /////////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 정책 설정 -->
+	<!-- /////////////////////////////////////////////////////////////////////////////////// -->
+	
+	<delete id="deletePolicyObjectByPolicyRecid" parameterType="int">
+		DELETE FROM policy_object
+		WHERE policy_recid = #{policyRecid}
+	</delete>
+	
+	<delete id="deletePolicyTargetByPolicyRecid" parameterType="int">
+		DELETE FROM policy_target pt
+		USING policy_object po
+		WHERE po.recid = pt.object_recid
+		AND po.policy_recid = #{policyRecid}
+	</delete>
+	
+	<!-- 2016.3.15 swcho 정책 삭제 쿼리 수정 (기본 외 정책) -->
+	<!-- default_flag는 기본 정책인 경우에만 기입되므로 그외 사용자 정의 정책은 NULL이 된다.  -->
+	<delete id="deletePolicyInfo" parameterType="int">
+		DELETE FROM policy_list
+		WHERE recid = #{policyRecid}
+		AND default_flag = 0
+	</delete>
+	
+	
+	<!-- Date : 2015-11-20 Author : LeeJungYoung -->
+	<!-- Description : 정책 설정 리스트 카운트 -->
+	<!-- 
+		시스템 관리 계정(castle) 접속이 아닐 시에는 관리 계정 전용 정책을 제외한다 default_flag < 2 
+		2016.6.23 swcho
+	-->
+	<select id="getPolicyConfigListCount" parameterType="map" resultType="int">
+		SELECT count(*) AS count 
+		FROM policy_list N
+		<trim prefix="WHERE" prefixOverrides="AND | OR">
+			<if test="policyId != null and policyId != '' ">
+				AND N.policy_id = #{policyId}
+			</if>
+			<if test="policyName != null and policyName != '' ">
+				AND N.policy_name ILIKE '%' || #{policyName} || '%'
+			</if>
+			<if test="createUser != null and createUser != '' ">
+				AND N.create_user ILIKE '%' || #{createUser} || '%'
+			</if>
+			<if test="startDt != null and startDt != '' ">
+				AND N.create_dt >=  to_timestamp(#{startDt}, 'YYYY-MM-DD')
+			</if>
+			<if test="endDt != null and endDt != '' ">
+				AND to_timestamp(#{endDt} || ' 23:59:59', 'YYYY-MM-DD HH24:MI:SS') >= N.create_dt
+			</if>
+			<if test="defaultFlag == null or defaultFlag == ''">
+					AND default_flag <![CDATA[ < ]]> 2
+			</if>
+		</trim>
+	</select>
+	
+	<!-- Date : 2015-11-20 Author : LeeJungYoung -->
+	<!-- Description : 정책 설정 리스트 조회 -->
+	<!-- 
+		시스템 관리 계정(castle) 접속이 아닐 시에는 관리 계정 전용 정책을 제외한다 default_flag < 2 
+		2016.6.23 swcho
+	-->
+	<select id="getPolicyConfigList" parameterType="map" resultMap="policyMap" >
+		SELECT *
+		FROM (
+				SELECT ROW_NUMBER() OVER (ORDER BY ${sortFieldNm} ${sortDir} ) AS rownum,
+				
+				N.recid,
+				N.category,
+				N.policy_id,
+				N.policy_name,
+				N.priority,
+				N.create_dt,
+				N.create_ip,
+				N.create_user,
+				N.update_dt,
+				N.update_ip,
+				N.update_user,
+				N.enable,
+				N.from_dt,
+				N.to_dt,
+				N.memo,
+				N.default_flag
+				
+			FROM policy_list N 
+			<trim prefix="WHERE" prefixOverrides="AND | OR">
+				<if test="policyId != null and policyId != '' ">
+					AND N.policy_id = #{policyId}
+				</if>
+				<if test="policyName != null and policyName != '' ">
+					AND N.policy_name ILIKE '%' || #{policyName} || '%'
+				</if>
+				<if test="createUser != null and createUser != '' ">
+					AND N.create_user ILIKE '%' || #{createUser} || '%'
+				</if>
+				<if test="startDt != null and startDt != '' ">
+					AND N.create_dt >=  to_timestamp(#{startDt}, 'YYYY-MM-DD')
+				</if>
+				<if test="endDt != null and endDt != '' ">
+					AND to_timestamp(#{endDt} || ' 23:59:59', 'YYYY-MM-DD HH24:MI:SS') >= N.create_dt
+				</if>
+				<if test="defaultFlag == null or defaultFlag == ''">
+					AND default_flag <![CDATA[ < ]]> 2
+				</if>
+			</trim>
+		) SN
+		WHERE SN.rownum BETWEEN CAST(#{startPage} AS INT) AND CAST(#{endPage} AS INT)
+	</select>
+	
+	<!-- Date : 2015-11-20 Author : LeeJungYoung -->
+	<!-- Description : 정책에따른 사용자&사용자그룹 리스트 카운트 -->
+	<select id="getPolicyObjectListInfoCount" parameterType="map" resultType="int">
+		SELECT count(*) AS count 
+		FROM policy_object N 
+		WHERE N.policy_recid = CAST(#{policyRecid} AS INT)
+		AND  N.type = CAST(#{policyObjectType} AS INT)
+	</select>
+	
+	<!-- Date : 2015-11-20 Author : LeeJungYoung -->
+	<!-- Description : 정책에따른 사용자&사용자그룹 리스트 -->
+	<select id="getPolicyObjectListInfo" parameterType="map" resultMap="policyObjectMap" >
+		SELECT *
+		FROM (
+				SELECT Row_Number() OVER (ORDER BY N.recid DESC ) AS rownum,
+
+				N.recid,
+				N.policy_recid,
+				N.type,
+				N.referenced_recid,
+				N.filter,
+				N.priority
+				
+			FROM policy_object N 
+			WHERE N.policy_recid = CAST(#{policyRecid} AS INT)
+			AND  N.type = CAST(#{policyObjectType} AS INT)
+		) SN
+		WHERE SN.rownum BETWEEN CAST(#{startPage} AS INT) AND CAST(#{endPage} AS INT)
+	</select>
+	
+	<!-- /////////////////////////////////////////////////////////////////////////////////// -->
+	<!-- 정책 설정 END-->
+	<!-- /////////////////////////////////////////////////////////////////////////////////// -->
+	
+	<!-- 2016-04-26 LeeJungYounf -->
+	<!-- 정책 중복으로 들어가는 경우를 체크하기 위한 쿼리 -->
+	<select id="selectDeplicatePolicyObjectList" parameterType="hashmap" resultMap="policyObjectMap">
+		SELECT po.*
+		FROM policy_Object po
+		INNER JOIN policy_list pl
+		ON po.policy_recid = pl.recid
+		<where>
+			<if test="policyId != null || policyId != ''">
+			AND pl.policy_id = #{policyId}
+			</if>
+			<if test="type != 0">
+				AND po.type = #{type}
+			</if>
+			AND po.referenced_recid IN
+			<foreach collection="referencedRecids" item="id"  open="(" separator="," close=")">  
+					CAST(#{id} AS INT) 
+			</foreach>
+		</where>
+	</select>
+	
+	<select id="selectPolicyTargetList" parameterType="PolicyTarget" resultMap="policyTargetMap">
+		SELECT *
+		FROM policy_target
+		<where>
+			<if test="recid != 0">
+				AND recid = #{recid}
+			</if>
+			<if test="objectRecid != 0">
+				AND object_recid = #{objectRecid}
+			</if>
+			<if test="type != 0">
+				AND type = #{type}
+			</if>
+			<if test="referencedRecid != 0">
+				AND referenced_recid = #{referencedRecid}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectPolicyTargetListByEquipGroup" parameterType="PolicyTarget" resultMap="policyTargetMap">
+		WITH RECURSIVE result_sub_group AS (
+			SELECT recid, group_name, group_path, parent_group_recid
+			FROM equip_group_info
+				WHERE recid = #{referencedRecid}
+			UNION
+			SELECT A.recid, A.group_name, A.group_path, A.parent_group_recid
+			FROM equip_group_info A
+				JOIN result_sub_group B ON B.parent_group_recid = A.recid
+		)
+		SELECT PT.*
+		FROM policy_target PT
+			INNER JOIN result_sub_group RSG ON PT.type = 3
+				AND RSG.recid = PT.referenced_recid
+				AND PT.object_recid = #{objectRecid}
+		ORDER BY length(rsg.group_path) DESC
+	</select>
+</mapper>

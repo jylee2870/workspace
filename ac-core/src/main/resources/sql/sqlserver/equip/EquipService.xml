@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sql">
+	<resultMap id="EquipServiceInfoResult" type="EquipService">
+		<id column="recid" property="recid"/>
+		<result column="service_name" property="serviceName"/>
+		<result column="create_dt" property="createDt"/>
+		<result column="create_ip" property="createIp"/>
+		<result column="create_user" property="createUser"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<resultMap id="EquipServiceRelationResult" type="EquipServiceRelation">
+		<id column="recid" property="recid"/>
+		<result column="equip_recid" property="equipRecid"/>
+		<result column="equip_service_recid" property="equipServiceRecid"/>
+		<result column="update_dt" property="updateDt"/>
+		<result column="update_ip" property="updateIp"/>
+		<result column="update_user" property="updateUser"/>
+	</resultMap>
+	
+	<resultMap id="EquipServiceRelationEx" type="EquipServiceRelation" extends="EquipServiceRelationResult">
+		<association property="equipServiceInfo" resultMap="EquipServiceInfoResult" columnPrefix="es_" />
+	</resultMap>
+	
+	<!-- 장비-서비스정보 조회 -->
+	<sql id="selectEquipServiceInfo">
+		SELECT recid,
+			service_name,
+			create_dt,
+			create_ip,
+			create_user,
+			update_dt,
+			update_ip,
+			update_user
+		FROM equip_service
+	</sql>
+	
+	<!-- 장비-장비서비스그룹 관계 조회 -->
+	<sql id="selectEquipServiceRelation">
+		SELECT
+			recid,
+			equip_recid,
+			equip_service_recid,
+			update_dt,
+			update_ip,
+			update_user
+		FROM equip_service_relation
+	</sql>
+	
+	<select id="getEquipServiceListCount" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultType="int">
+		SELECT count(*)
+		FROM equip_service
+		<where>
+			<if test='entity.serviceName != null and entity.serviceName != ""'>
+				AND service_name LIKE '%' + #{entity.serviceName} + '%'
+			</if>
+			<if test='extraParams != null'>
+				<choose>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+						AND CONVERT(date, create_dt) BETWEEN CONVERT(date, #{extraParams.startDate}) AND CONVERT(date, #{extraParams.endDate})
+					</when>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+						AND CONVERT(date, create_dt) >= CONVERT(date, #{extraParams.startDate})
+					</when>
+					<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+						AND CONVERT(date, #{extraParams.endDate}) >= CONVERT(date, create_dt)
+					</when>
+				</choose>
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipServiceList" parameterType="sga.sol.ac.core.entity.criteria.SearchParams" resultMap="EquipServiceInfoResult">
+		SELECT * FROM (
+			SELECT ROW_NUMBER() OVER(ORDER BY ${sort.sortFieldNm} ${sort.sortDir}) AS rownum,
+			*
+			FROM equip_service
+			<where>
+				<if test='entity.serviceName != null and entity.serviceName != ""'>
+					AND service_name LIKE '%' + #{entity.serviceName} + '%'
+				</if>
+				<if test='extraParams != null'>
+					<choose>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "") and (extraParams.endDate != null and extraParams.endDate !="")'>
+						AND CONVERT(date, create_dt) BETWEEN CONVERT(date, #{extraParams.startDate}) AND CONVERT(date, #{extraParams.endDate})
+					</when>
+					<when test='(extraParams.startDate != null and extraParams.startDate != "")'>
+						AND CONVERT(date, create_dt) >= CONVERT(date, #{extraParams.startDate})
+					</when>
+					<when test='(extraParams.endDate != null and extraParams.endDate != "")'>
+						AND CONVERT(date, #{extraParams.endDate}) >= CONVERT(date, create_dt)
+					</when>
+					</choose>
+				</if>
+			</where>
+		) N
+		<where>
+			<if test="page != null">
+				N.rownum BETWEEN #{page.startPage} AND #{page.endPage}
+			</if>
+		</where>
+	</select>
+	
+	<select id="selectEquipServiceByParam" parameterType="EquipService" resultMap="EquipServiceInfoResult">
+		<include refid="selectEquipServiceInfo"/>
+		<where>
+			<if test='recid > 0'>
+				AND recid = #{recid}
+			</if>
+			<if test='serviceName != null and serviceName != ""'>
+				AND service_name = #{serviceName}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 장비-서비스정보 추가-->
+	<insert id="insertEquipServiceInfo" parameterType="EquipService" useGeneratedKeys="true" keyColumn="recid" keyProperty="recid">
+		INSERT INTO equip_service (
+			service_name,
+			create_dt, create_ip, create_user
+		)
+		VALUES (
+			#{serviceName},
+			getdate(), #{createIp}, #{createUser}
+		)
+	</insert>
+
+	<!-- 장비-서비스정보 수정 by recid-->
+	<update id="updateEquipServiceInfoByRecid" parameterType="EquipService">
+		UPDATE equip_service SET
+			service_name = #{serviceName},
+			update_dt = GETDATE(),
+			update_ip = #{updateIp},
+			update_user = #{updateUser}
+		WHERE recid = #{recid}
+	</update>
+	
+	<delete id="deleteEquipServiceInfoByRecid" parameterType="int">
+		DELETE FROM equip_service
+		WHERE recid = #{recid}
+	</delete>
+	
+	<!-- 장비-서비스정보 삭제 by recid 리스트 -->
+	<delete id="deleteEquipServiceByRecidList" parameterType="list">
+		DELETE FROM equip_service
+		WHERE recid IN
+		<foreach collection="list" item="id"  open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+	
+	<update id="updateEquipServiceRecidForDelete" parameterType="list">
+		UPDATE equip_service_relation SET
+			equip_service_recid = 1
+		WHERE equip_service_recid IN 
+		<foreach collection="list" item="id"  open="(" separator="," close=")">
+			#{id}
+		</foreach>
+	</update>
+	
+	<!-- 장비-서비스정보 EQUIP_SVR_ID = 1로 수정 by EQUIP_SVR_ID-->
+	<!-- 
+	<update id="updateEquipServiceIdForDefault" parameterType="int">
+		UPDATE equip_service_relation
+		SET equip_service_recid = 1
+		WHERE equip_service_recid = #{recid}
+	</update>
+	-->
+	
+	<!-- 장비-장비서비스그룹 조회 by 장비 ID-->
+	<select id="getEquipServiceRelationByEquipId" parameterType="int" resultMap="EquipServiceRelationEx">
+		SELECT
+			ESR.*,
+			ES.recid as es_recid,
+			ES.service_name as es_service_name,
+			ES.create_dt as es_create_dt,
+			ES.create_ip as es_create_ip,
+			ES.create_user as es_create_user,
+			ES.update_dt as es_update_dt,
+			ES.update_ip as es_update_ip,
+			ES.update_user as es_update_user
+		FROM equip_service_relation ESR
+			INNER JOIN equip_service ES ON ESR.equip_service_recid = ES.recid
+		WHERE ESR.equip_recid = #{equipRecid}
+	</select>
+	
+	<!-- 장비-장비서비스그룹 관계 추가 -->
+	<insert id="insertEquipServiceRelation" parameterType="EquipServiceRelation">
+		INSERT INTO equip_service_relation(
+			equip_recid , equip_service_recid, update_dt
+		)
+		VALUES (
+			#{equipRecid}, #{equipServiceRecid}, getdate()
+		)
+	</insert>
+	
+	<!-- 장비-장비서비스그룹 관계 삭제 -->
+	<delete id="deleteEquipServiceRelationByEquipId" parameterType="int">
+		DELETE FROM equip_service_relation
+		WHERE equip_recid = #{equipRecid}
+	</delete>
+	
+	<!--
+		장비-장비서비스 관계 삭제
+		2016.3.2 swcho 선택된 장비 없이 일괄삭제 가능하도록 분기문 추가
+	 -->
+	<delete id="deleteEquipServiceRelationByEquipIdList" parameterType="list">
+		DELETE FROM equip_service_relation
+		<where>
+			<if test="list != null and list.size > 0">
+				<foreach collection="list" item="id"  open="equip_recid IN (" separator="," close=")">
+					#{id}
+				</foreach>
+			</if>
+		</where>
+	</delete>
+	
+	<!-- 장비-장비서비스그룹 수정-->
+	<update id="updateEquipServiceRelation" parameterType="EquipServiceRelation">
+		UPDATE equip_service_relation SET
+			equip_service_recid = #{equipServiceRecid},
+			update_dt = getdate(),
+			update_ip = #{updateIp},
+			update_user = #{updateUser}
+		WHERE equip_recid = #{equipRecid}
+	</update>
+</mapper>
