@@ -1,0 +1,35 @@
+package com.bom.serial.protobuf;
+option java_generic_services = true;
+
+message AgentRequest {
+
+  required string tr_id = 1;
+  required string file_id = 2;
+  required int64 length = 3;
+  required int64 offset = 4;
+  repeated KVMap header = 5;
+
+  message KVMap {
+    required string key = 1;
+    required string value = 2;
+  }
+
+  optional bytes reqbody = 6;
+}
+
+message AgentResponse {
+  required string tr_id = 1;
+  required string file_id = 2;
+  enum Status {
+    SUCC = 1;
+    FAIL = 2;
+    ERROR = 3;
+    UNKNOWN = 4;
+  }
+  required Status status = 3;
+  optional string respbody = 4;
+}
+
+service AgentService {
+    rpc Append (AgentRequest) returns (AgentResponse);
+}

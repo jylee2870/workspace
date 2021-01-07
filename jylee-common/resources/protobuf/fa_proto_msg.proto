@@ -1,0 +1,29 @@
+package com.bom.serial.protobuf;
+option java_generic_services = true;
+
+message FAMsg {
+  enum Status {
+    REQ = 1;
+    SUCC = 2;
+    FAIL = 3;
+    ERROR = 4;
+    UNKNOWN = 5;
+  }
+  message KV {
+    required string key = 1;
+    required string value = 2;
+    optional string info = 3;
+  }
+  required string fa_id = 1;
+  required Status status = 2;
+  required string kind = 3;
+  required string command = 4;
+  required string msg_id = 5;
+  repeated KV params = 6;
+
+  optional string body = 7;
+}
+
+service FAService {
+    rpc Append (FAMsg) returns (FAMsg);
+}
